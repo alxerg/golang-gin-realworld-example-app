@@ -171,6 +171,36 @@
 			"revisionTime": "2017-06-20T10:48:52Z"
 		},
 		{
+			"checksumSHA1": "dRsoG7ycCiZMg6gCKn5DJNZr+D8=",
+			"path": "github.com/wangzitian0/golang-gin-starter-kit/articles",
+			"revision": "9423bbefbc22d77939a18069037a3f08fd4f5592",
+			"revisionTime": "2017-11-03T11:56:06Z"
+		},
+		{
+			"checksumSHA1": "0GZN6cNyYugHqxefkyAVTqJpb1M=",
+			"path": "github.com/recoilme/golang-gin-realworld-example-app/common",
+			"revision": "9423bbefbc22d77939a18069037a3f08fd4f5592",
+			"revisionTime": "2017-11-03T11:56:06Z"
+		},
+		{
+			"checksumSHA1": "5aXQlEbUQhrpCjlybC/sVMnZBxE=",
+			"path": "github.com/wangzitian0/golang-gin-starter-kit/users",
+			"revision": "9423bbefbc22d77939a18069037a3f08fd4f5592",
+			"revisionTime": "2017-11-03T11:56:06Z"
+		},
+		{
+			"checksumSHA1": "UWjVYmoHlIfHzVIskELHiJQtMOI=",
+			"path": "golang.org/x/crypto/bcrypt",
+			"revision": "81e90905daefcd6fd217b62423c0908922eadb30",
+			"revisionTime": "2017-08-25T20:24:07Z"
+		},
+		{
+			"checksumSHA1": "oVPHWesOmZ02vLq2fglGvf+AMgk=",
+			"path": "golang.org/x/crypto/blowfish",
+			"revision": "81e90905daefcd6fd217b62423c0908922eadb30",
+			"revisionTime": "2017-08-25T20:24:07Z"
+		},
+		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "f01ecb60fe3835d80d9a0b7b2bf24b228c89260e",
@@ -207,5 +237,5 @@
 			"revisionTime": "2017-07-12T05:45:46Z"
 		}
 	],
-	"rootPath": "github.com/wangzitian0/golang-gin-starter-kit"
+	"rootPath": "github.com/recoilme/golang-gin-realworld-example-app"
 }

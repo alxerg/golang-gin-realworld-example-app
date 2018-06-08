@@ -2,10 +2,11 @@ package articles
 
 import (
 	_ "fmt"
+	"strconv"
+
 	"github.com/jinzhu/gorm"
 	"github.com/wangzitian0/golang-gin-starter-kit/common"
 	"github.com/wangzitian0/golang-gin-starter-kit/users"
-	"strconv"
 )
 
 type ArticleModel struct {
@@ -15,7 +16,7 @@ type ArticleModel struct {
 	Description string `gorm:"size:2048"`
 	Body        string `gorm:"size:2048"`
 	Author      ArticleUserModel
-	AuthorID    uint
+	AuthorID    uint32
 	Tags        []TagModel     `gorm:"many2many:article_tags;"`
 	Comments    []CommentModel `gorm:"ForeignKey:ArticleID"`
 }
@@ -23,7 +24,7 @@ type ArticleModel struct {
 type ArticleUserModel struct {
 	gorm.Model
 	UserModel      users.UserModel
-	UserModelID    uint
+	UserModelID    uint32
 	ArticleModels  []ArticleModel  `gorm:"ForeignKey:AuthorID"`
 	FavoriteModels []FavoriteModel `gorm:"ForeignKey:FavoriteByID"`
 }
@@ -31,9 +32,9 @@ type ArticleUserModel struct {
 type FavoriteModel struct {
 	gorm.Model
 	Favorite     ArticleModel
-	FavoriteID   uint
+	FavoriteID   uint32
 	FavoriteBy   ArticleUserModel
-	FavoriteByID uint
+	FavoriteByID uint32
 }
 
 type TagModel struct {
@@ -45,9 +46,9 @@ type TagModel struct {
 type CommentModel struct {
 	gorm.Model
 	Article   ArticleModel
-	ArticleID uint
+	ArticleID uint32
 	Author    ArticleUserModel
-	AuthorID  uint
+	AuthorID  uint32
 	Body      string `gorm:"size:2048"`
 }
 
