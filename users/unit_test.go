@@ -33,25 +33,32 @@ func newUserModel() UserModel {
 }
 
 func userModelMocker(n int) []UserModel {
+
+	var offset int
+	cnt, err := slowpoke.Count(dbUser)
+	if err != nil {
+		fmt.Println(err)
+	}
+	offset = int(cnt)
+
 	var ret []UserModel
-	return ret
-	/*
-		var offset int
-		test_db.Model(&UserModel{}).Count(&offset)
-		var ret []UserModel
-		for i := offset + 1; i <= offset+n; i++ {
-			image := fmt.Sprintf("http://image/%v.jpg", i)
-			userModel := UserModel{
-				Username: fmt.Sprintf("user%v", i),
-				Email:    fmt.Sprintf("user%v@linkedin.com", i),
-				Bio:      fmt.Sprintf("bio%v", i),
-				Image:    &image,
-			}
-			userModel.setPassword("password123")
-			test_db.Create(&userModel)
-			ret = append(ret, userModel)
+	for i := offset + 1; i <= offset+n; i++ {
+		image := fmt.Sprintf("http://image/%v.jpg", i)
+		userModel := UserModel{
+			ID:       uint32(i),
+			Username: fmt.Sprintf("user%v", i),
+			Email:    fmt.Sprintf("user%v@linkedin.com", i),
+			Bio:      fmt.Sprintf("bio%v", i),
+			Image:    &image,
 		}
-		return ret*/
+		userModel.setPassword("password123")
+		err := SaveOne(&userModel)
+		if err != nil {
+			fmt.Println("userModelMocker", err)
+		}
+		ret = append(ret, userModel)
+	}
+	return ret
 
 }
 
@@ -90,12 +97,14 @@ func TestUserModel(t *testing.T) {
 	asserts.Equal(true, a.isFollowing(b), "isFollowing should be right after a following b")
 	a.following(c)
 	asserts.Equal(2, len(a.GetFollowings()), "GetFollowings be right after a following c")
+
 	asserts.EqualValues(b, a.GetFollowings()[0], "GetFollowings should be right")
 	asserts.EqualValues(c, a.GetFollowings()[1], "GetFollowings should be right")
 	a.unFollowing(b)
 	asserts.Equal(1, len(a.GetFollowings()), "GetFollowings should be right after a unFollowing b")
 	asserts.EqualValues(c, a.GetFollowings()[0], "GetFollowings should be right after a unFollowing b")
 	asserts.Equal(false, a.isFollowing(b), "isFollowing should be right after a unFollowing b")
+
 }
 
 //Reset test DB and create new one with mock data
@@ -496,7 +505,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestAppend(t *testing.T) {
-	u1 := UserModel{ID: 1}
-	u2 := UserModel{ID: 2}
-	u1.following(u2)
+	_ = userModelMocker(3)
+
 }

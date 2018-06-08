@@ -82,9 +82,8 @@ func (u *UserModel) checkPassword(password string) error {
 // You could input the conditions and it will return an UserModel in database with error info.
 // 	userModel, err := FindOneUser(&UserModel{Username: "username0"})
 // username, email or id
-func FindOneUser(condition interface{}) (model UserModel, err error) {
+func FindOneUser(queryUser *UserModel) (model UserModel, err error) {
 
-	queryUser := condition.(UserModel)
 	var id32 = make([]byte, 4)
 	if queryUser.ID != 0 {
 		//get by id
@@ -107,7 +106,7 @@ func FindOneUser(condition interface{}) (model UserModel, err error) {
 }
 
 // checkUserConstr - check new user mail and name
-func checkUserConstr(user UserModel) (err error) {
+func checkUserConstr(user *UserModel) (err error) {
 	// check mail
 	has, err := sp.Has(dbUserMail, []byte(user.Email))
 	if err != nil {
@@ -130,8 +129,8 @@ func checkUserConstr(user UserModel) (err error) {
 
 // You could input an UserModel which will be saved in database returning with error info
 // 	if err := SaveOne(&userModel); err != nil { ... }
-func SaveOne(data interface{}) (err error) {
-	user := data.(UserModel)
+func SaveOne(user *UserModel) (err error) {
+	//user := data.(UserModel)
 	err = checkUserConstr(user)
 	if err != nil {
 		return err
@@ -169,7 +168,7 @@ func SaveOne(data interface{}) (err error) {
 // You could update properties of an UserModel to database returning with error info.
 //  err := db.Model(userModel).Update(UserModel{Username: "wangzitian0"}).Error
 func (model *UserModel) Update(data interface{}) (err error) {
-	user := data.(UserModel)
+	user := data.(*UserModel)
 	if user.Email != "" && user.Email != model.Email {
 		sp.Delete(dbUserMail, []byte(model.Email))
 	}
@@ -178,7 +177,7 @@ func (model *UserModel) Update(data interface{}) (err error) {
 		sp.Delete(dbUserMail, []byte(model.Username))
 	}
 
-	err = SaveOne(data)
+	err = SaveOne(user)
 	return err
 }
 
@@ -255,13 +254,15 @@ func (u UserModel) GetFollowings() []UserModel {
 
 	for _, k := range keys {
 		if len(k) == 9 {
-			b := k[6:]
+			b := k[5:]
 			var u UserModel
 			e := sp.GetGob(dbUser, b, &u)
 			if e != nil {
-				fmt.Println(e)
+				fmt.Println("GetFollowings", e)
+			} else {
+				followings = append(followings, u)
 			}
-			followings = append(followings, u)
+
 		}
 	}
 	return followings
