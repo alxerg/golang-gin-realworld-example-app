@@ -168,7 +168,7 @@ func SaveOne(user *UserModel) (err error) {
 // You could update properties of an UserModel to database returning with error info.
 //  err := db.Model(userModel).Update(UserModel{Username: "wangzitian0"}).Error
 func (model *UserModel) Update(data interface{}) (err error) {
-	user := data.(*UserModel)
+	user := data.(UserModel)
 	if user.Email != "" && user.Email != model.Email {
 		sp.Delete(dbUserMail, []byte(model.Email))
 	}
@@ -177,7 +177,7 @@ func (model *UserModel) Update(data interface{}) (err error) {
 		sp.Delete(dbUserMail, []byte(model.Username))
 	}
 
-	err = SaveOne(user)
+	err = SaveOne(&user)
 	return err
 }
 
