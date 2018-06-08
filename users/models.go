@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/jinzhu/gorm"
-	"github.com/wangzitian0/golang-gin-starter-kit/common"
+	"github.com/recoilme/golang-gin-realworld-example-app/common"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,10 +42,7 @@ type FollowModel struct {
 
 // Migrate the schema of database if needed
 func AutoMigrate() {
-	db := common.GetDB()
 
-	db.AutoMigrate(&UserModel{})
-	db.AutoMigrate(&FollowModel{})
 }
 
 // What's bcrypt? https://en.wikipedia.org/wiki/Bcrypt

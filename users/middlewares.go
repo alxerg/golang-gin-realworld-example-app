@@ -1,12 +1,13 @@
 package users
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
-	"github.com/wangzitian0/golang-gin-starter-kit/common"
+	"github.com/recoilme/golang-gin-realworld-example-app/common"
 
 	"gopkg.in/gin-gonic/gin.v1"
 )
@@ -37,9 +38,16 @@ var MyAuth2Extractor = &request.MultiExtractor{
 // A helper to write user_id and user_model to the context
 func UpdateContextUserModel(c *gin.Context, my_user_id uint32) {
 	var myUserModel UserModel
+	var err error
 	if my_user_id != 0 {
-		db := common.GetDB()
-		db.First(&myUserModel, my_user_id)
+		myUserModel, err = FindOneUser(&UserModel{ID: my_user_id})
+		if err != nil {
+			log.Println("UpdateContextUserModel:", err)
+		} else {
+			//TODO why not here?
+			//c.Set("my_user_id", my_user_id)
+			//c.Set("my_user_model", myUserModel)
+		}
 	}
 	c.Set("my_user_id", my_user_id)
 	c.Set("my_user_model", myUserModel)

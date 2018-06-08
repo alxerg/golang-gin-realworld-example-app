@@ -29,7 +29,7 @@ const NBSecretPassword = "A String Very Very Very Strong!!@##$!@#$"
 const NBRandomPassword = "A String Very Very Very Niubilty!!@##$!@#4"
 
 // A Util function to generate jwt_token which can be used in the request header
-func GenToken(id uint) string {
+func GenToken(id uint32) string {
 	jwt_token := jwt.New(jwt.GetSigningMethod("HS256"))
 	// Set some claims
 	jwt_token.Claims = jwt.MapClaims{
