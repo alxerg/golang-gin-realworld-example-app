@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+
 	"github.com/jinzhu/gorm"
 	"github.com/wangzitian0/golang-gin-starter-kit/common"
 	"golang.org/x/crypto/bcrypt"
@@ -13,7 +14,7 @@ import (
 //
 // HINT: If you want to split null and "", you should use *string instead of string.
 type UserModel struct {
-	ID           uint    `gorm:"primary_key"`
+	ID           uint32  `gorm:"primary_key"`
 	Username     string  `gorm:"column:username"`
 	Email        string  `gorm:"column:email;unique_index"`
 	Bio          string  `gorm:"column:bio;size:1024"`
@@ -34,9 +35,9 @@ type UserModel struct {
 type FollowModel struct {
 	gorm.Model
 	Following    UserModel
-	FollowingID  uint
+	FollowingID  uint32
 	FollowedBy   UserModel
-	FollowedByID uint
+	FollowedByID uint32
 }
 
 // Migrate the schema of database if needed

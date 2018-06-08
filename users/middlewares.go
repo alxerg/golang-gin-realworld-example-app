@@ -1,12 +1,13 @@
 package users
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/wangzitian0/golang-gin-starter-kit/common"
 	"gopkg.in/gin-gonic/gin.v1"
-	"net/http"
-	"strings"
 )
 
 // Strips 'TOKEN ' prefix from token string
@@ -33,7 +34,7 @@ var MyAuth2Extractor = &request.MultiExtractor{
 }
 
 // A helper to write user_id and user_model to the context
-func UpdateContextUserModel(c *gin.Context, my_user_id uint) {
+func UpdateContextUserModel(c *gin.Context, my_user_id uint32) {
 	var myUserModel UserModel
 	if my_user_id != 0 {
 		db := common.GetDB()
@@ -59,7 +60,7 @@ func AuthMiddleware(auto401 bool) gin.HandlerFunc {
 			return
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			my_user_id := uint(claims["id"].(float64))
+			my_user_id := uint32(claims["id"].(float64))
 			//fmt.Println(my_user_id,claims["id"])
 			UpdateContextUserModel(c, my_user_id)
 		}

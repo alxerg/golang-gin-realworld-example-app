@@ -13,7 +13,7 @@ type ProfileSerializer struct {
 
 // Declare your response schema here
 type ProfileResponse struct {
-	ID        uint    `json:"-"`
+	ID        uint32  `json:"-"`
 	Username  string  `json:"username"`
 	Bio       string  `json:"bio"`
 	Image     *string `json:"image"`
