@@ -1,11 +1,20 @@
 package users
 
 import (
+	"encoding/binary"
 	"errors"
 
 	"github.com/jinzhu/gorm"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
+	sp "github.com/recoilme/slowpoke"
 	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	dbUser     = "db/user"
+	dbUserName = "db/username"
+	dbUserMail = "db/usermail"
+	dbCounter  = "db/counter"
 )
 
 // Models should only be concerned with database schema, more strict checking should be put in validator.
@@ -70,26 +79,101 @@ func (u *UserModel) checkPassword(password string) error {
 
 // You could input the conditions and it will return an UserModel in database with error info.
 // 	userModel, err := FindOneUser(&UserModel{Username: "username0"})
-func FindOneUser(condition interface{}) (UserModel, error) {
-	db := common.GetDB()
-	var model UserModel
-	err := db.Where(condition).First(&model).Error
+// username, email or id
+func FindOneUser(condition interface{}) (model UserModel, err error) {
+
+	queryUser := condition.(UserModel)
+	var id32 = make([]byte, 4)
+	if queryUser.ID != 0 {
+		//get by id
+		binary.BigEndian.PutUint32(id32, queryUser.ID)
+	} else if queryUser.Username != "" {
+		// get by username
+		id32, err = sp.Get(dbUserName, []byte(queryUser.Username))
+	} else if queryUser.Email != "" {
+		// get by email
+		id32, err = sp.Get(dbUserMail, []byte(queryUser.Email))
+	} else {
+		// no codition
+		err = errors.New("Invalid condition")
+	}
+	if err != nil {
+		return model, err
+	}
+	err = sp.GetGob(dbUser, id32, &model)
 	return model, err
+}
+
+// checkUserConstr - check new user mail and name
+func checkUserConstr(user UserModel) (err error) {
+	// check mail
+	has, err := sp.Has(dbUserMail, []byte(user.Email))
+	if err != nil {
+		return err
+	}
+	if has {
+		return errors.New("UNIQUE constraint failed: user_models.email")
+	}
+
+	// check username
+	hasname, err := sp.Has(dbUserMail, []byte(user.Username))
+	if err != nil {
+		return err
+	}
+	if hasname {
+		return errors.New("UNIQUE constraint failed: user_models.username")
+	}
+	return err
 }
 
 // You could input an UserModel which will be saved in database returning with error info
 // 	if err := SaveOne(&userModel); err != nil { ... }
-func SaveOne(data interface{}) error {
-	db := common.GetDB()
-	err := db.Save(data).Error
+func SaveOne(data interface{}) (err error) {
+	user := data.(UserModel)
+	err = checkUserConstr(user)
+	if err != nil {
+		return err
+	}
+
+	if user.ID == 0 {
+		// new user
+		uid, err := sp.Counter(dbCounter, []byte("uid"))
+		user.ID = uint32(uid)
+		// workaround for sp crash
+		sp.Close(dbCounter)
+	}
+
+	id32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(id32, user.ID)
+
+	if err = sp.Set(dbUserName, []byte(user.Username), id32); err != nil {
+		return err
+	}
+
+	if err = sp.Set(dbUserMail, []byte(user.Email), id32); err != nil {
+		return err
+	}
+
+	if err = sp.SetGob(dbUser, id32, user); err != nil {
+		return err
+	}
+
 	return err
 }
 
 // You could update properties of an UserModel to database returning with error info.
 //  err := db.Model(userModel).Update(UserModel{Username: "wangzitian0"}).Error
-func (model *UserModel) Update(data interface{}) error {
-	db := common.GetDB()
-	err := db.Model(model).Update(data).Error
+func (model *UserModel) Update(data interface{}) (err error) {
+	user := data.(UserModel)
+	if user.Email != "" && user.Email != model.Email {
+		sp.Delete(dbUserMail, []byte(model.Email))
+	}
+
+	if user.Username != "" && user.Username != model.Username {
+		sp.Delete(dbUserMail, []byte(model.Username))
+	}
+
+	err = SaveOne(data)
 	return err
 }
 
