@@ -3,6 +3,8 @@ package users
 import (
 	"testing"
 
+	"github.com/recoilme/slowpoke"
+
 	"github.com/stretchr/testify/assert"
 
 	"bytes"
@@ -12,13 +14,12 @@ import (
 	"os"
 	_ "regexp"
 
-	"github.com/jinzhu/gorm"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
 	"gopkg.in/gin-gonic/gin.v1"
 )
 
 var image_url = "https://golang.org/doc/gopher/frontpage.png"
-var test_db *gorm.DB
+var test_db *slowpoke.Db
 
 func newUserModel() UserModel {
 	return UserModel{
@@ -32,22 +33,26 @@ func newUserModel() UserModel {
 }
 
 func userModelMocker(n int) []UserModel {
-	var offset int
-	test_db.Model(&UserModel{}).Count(&offset)
 	var ret []UserModel
-	for i := offset + 1; i <= offset+n; i++ {
-		image := fmt.Sprintf("http://image/%v.jpg", i)
-		userModel := UserModel{
-			Username: fmt.Sprintf("user%v", i),
-			Email:    fmt.Sprintf("user%v@linkedin.com", i),
-			Bio:      fmt.Sprintf("bio%v", i),
-			Image:    &image,
-		}
-		userModel.setPassword("password123")
-		test_db.Create(&userModel)
-		ret = append(ret, userModel)
-	}
 	return ret
+	/*
+		var offset int
+		test_db.Model(&UserModel{}).Count(&offset)
+		var ret []UserModel
+		for i := offset + 1; i <= offset+n; i++ {
+			image := fmt.Sprintf("http://image/%v.jpg", i)
+			userModel := UserModel{
+				Username: fmt.Sprintf("user%v", i),
+				Email:    fmt.Sprintf("user%v@linkedin.com", i),
+				Bio:      fmt.Sprintf("bio%v", i),
+				Image:    &image,
+			}
+			userModel.setPassword("password123")
+			test_db.Create(&userModel)
+			ret = append(ret, userModel)
+		}
+		return ret*/
+
 }
 
 func TestUserModel(t *testing.T) {
@@ -361,7 +366,6 @@ var unauthRequestTests = []struct {
 			common.TestDBFree(test_db)
 			test_db = common.TestDBInit()
 
-			test_db.AutoMigrate(&UserModel{})
 			userModelMocker(3)
 			HeaderTokenMock(req, 2)
 		},
@@ -489,4 +493,10 @@ func TestMain(m *testing.M) {
 	exitVal := m.Run()
 	common.TestDBFree(test_db)
 	os.Exit(exitVal)
+}
+
+func TestAppend(t *testing.T) {
+	u1 := UserModel{ID: 1}
+	u2 := UserModel{ID: 2}
+	u1.following(u2)
 }

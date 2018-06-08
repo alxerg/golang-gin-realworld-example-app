@@ -3,18 +3,20 @@ package users
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/jinzhu/gorm"
-	"github.com/recoilme/golang-gin-realworld-example-app/common"
 	sp "github.com/recoilme/slowpoke"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	dbUser     = "db/user"
-	dbUserName = "db/username"
-	dbUserMail = "db/usermail"
-	dbCounter  = "db/counter"
+	dbUser        = "db/user"
+	dbUserName    = "db/username"
+	dbUserMail    = "db/usermail"
+	dbCounter     = "db/counter"
+	dbMasterSlave = "db/masterslave"
+	dbSlaveMaster = "db/slavemaster"
 )
 
 // Models should only be concerned with database schema, more strict checking should be put in validator.
@@ -138,6 +140,9 @@ func SaveOne(data interface{}) (err error) {
 	if user.ID == 0 {
 		// new user
 		uid, err := sp.Counter(dbCounter, []byte("uid"))
+		if err != nil {
+			return err
+		}
 		user.ID = uint32(uid)
 		// workaround for sp crash
 		sp.Close(dbCounter)
@@ -177,56 +182,87 @@ func (model *UserModel) Update(data interface{}) (err error) {
 	return err
 }
 
+func getMasterSlave(master uint32, slave uint32) ([]byte, []byte, []byte, []byte) {
+	master32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(master32, master)
+
+	slave32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(slave32, slave)
+
+	var masterslave = make([]byte, 0)
+	masterslave = append(masterslave, master32...)
+	masterslave = append(masterslave, ':')
+	masterslave = append(masterslave, slave32...)
+
+	var slavemaster = make([]byte, 0)
+	slavemaster = append(slavemaster, slave32...)
+	slavemaster = append(slavemaster, ':')
+	slavemaster = append(slavemaster, master32...)
+	return master32, slave32, masterslave, slavemaster
+}
+
 // You could add a following relationship as userModel1 following userModel2
 // 	err = userModel1.following(userModel2)
-func (u UserModel) following(v UserModel) error {
-	db := common.GetDB()
-	var follow FollowModel
-	err := db.FirstOrCreate(&follow, &FollowModel{
-		FollowingID:  v.ID,
-		FollowedByID: u.ID,
-	}).Error
+func (u UserModel) following(v UserModel) (err error) {
+	_, _, masterslave, slavemaster := getMasterSlave(u.ID, v.ID)
+	err = sp.Set(dbMasterSlave, masterslave, nil)
+	if err != nil {
+		return err
+	}
+	err = sp.Set(dbSlaveMaster, slavemaster, nil)
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
 // You could check whether  userModel1 following userModel2
 // 	followingBool = myUserModel.isFollowing(self.UserModel)
 func (u UserModel) isFollowing(v UserModel) bool {
-	db := common.GetDB()
-	var follow FollowModel
-	db.Where(FollowModel{
-		FollowingID:  v.ID,
-		FollowedByID: u.ID,
-	}).First(&follow)
-	return follow.ID != 0
+	master := u.ID
+	slave := v.ID
+	_, _, _, slavemaster := getMasterSlave(master, slave)
+	has, _ := sp.Has(dbSlaveMaster, slavemaster)
+	return has
 }
 
 // You could delete a following relationship as userModel1 following userModel2
 // 	err = userModel1.unFollowing(userModel2)
-func (u UserModel) unFollowing(v UserModel) error {
-	db := common.GetDB()
-	err := db.Where(FollowModel{
-		FollowingID:  v.ID,
-		FollowedByID: u.ID,
-	}).Delete(FollowModel{}).Error
+func (u UserModel) unFollowing(v UserModel) (err error) {
+	_, _, masterslave, slavemaster := getMasterSlave(u.ID, v.ID)
+	_, err = sp.Delete(dbSlaveMaster, slavemaster)
+	if err != nil {
+		return err
+	}
+	_, err = sp.Delete(dbMasterSlave, masterslave)
+
 	return err
 }
 
 // You could get a following list of userModel
 // 	followings := userModel.GetFollowings()
 func (u UserModel) GetFollowings() []UserModel {
-	db := common.GetDB()
-	tx := db.Begin()
-	var follows []FollowModel
 	var followings []UserModel
-	tx.Where(FollowModel{
-		FollowedByID: u.ID,
-	}).Find(&follows)
-	for _, follow := range follows {
-		var userModel UserModel
-		tx.Model(&follow).Related(&userModel, "Following")
-		followings = append(followings, userModel)
+
+	master32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(master32, u.ID)
+	var masterstar = make([]byte, 0)
+	masterstar = append(masterstar, master32...)
+	masterstar = append(masterstar, '*')
+
+	keys, _ := sp.Keys(dbMasterSlave, masterstar, 0, 0, true)
+
+	for _, k := range keys {
+		if len(k) == 9 {
+			b := k[6:]
+			var u UserModel
+			e := sp.GetGob(dbUser, b, &u)
+			if e != nil {
+				fmt.Println(e)
+			}
+			followings = append(followings, u)
+		}
 	}
-	tx.Commit()
 	return followings
 }
