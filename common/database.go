@@ -40,8 +40,9 @@ func TestDBInit() *slowpoke.Db {
 // Delete the database after running testing cases.
 func TestDBFree(test_db *slowpoke.Db) error {
 	//test_db.Close()
-	err := os.RemoveAll("./../gorm_test.db")
-	return err
+	os.RemoveAll("./../gorm_test.db")
+	errdir := os.RemoveAll("db")
+	return errdir
 }
 
 // Using this function to get a connection, you can create your connection pool here.
