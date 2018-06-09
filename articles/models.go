@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	dbSlug    = "db/slug"
-	dbCounter = "db/counter"
-	dbArticle = "db/article"
+	dbSlug    = "db/article/slug"
+	dbCounter = "db/article/counter"
+	dbArticle = "db/article/article"
 )
 
 type ArticleModel struct {
@@ -68,6 +68,7 @@ func GetArticleUserModel(userModel users.UserModel) ArticleUserModel {
 
 		return articleUserModel
 	}
+	//TODO query user?
 	/*
 		db := common.GetDB()
 		db.Where(&ArticleUserModel{
@@ -197,16 +198,7 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 		return model, err
 	}
 
-	/*
-		db := common.GetDB()
-
-		tx := db.Begin()
-		tx.Where(condition).First(&model)
-		tx.Model(&model).Related(&model.Author, "Author")
-		tx.Model(&model.Author).Related(&model.Author.UserModel)
-		tx.Model(&model).Related(&model.Tags, "Tags")
-		err := tx.Commit().Error
-	*/
+	// update author? but author may change username..
 	return model, err
 }
 
@@ -353,12 +345,13 @@ func (model *ArticleModel) setTags(tags []string) error {
 	return nil
 }
 
-func (model *ArticleModel) Update(data interface{}) (err error) {
+func (model *ArticleModel) Update(article ArticleModel) (err error) {
+	SaveOne(&article)
 	/*
 		db := common.GetDB()
 		err := db.Model(model).Update(data).Error
 	*/
-	return err
+	return SaveOne(&article)
 }
 
 func DeleteArticleModel(condition interface{}) (err error) {

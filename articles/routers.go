@@ -2,6 +2,7 @@ package articles
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -104,6 +105,9 @@ func ArticleUpdate(c *gin.Context) {
 	}
 	articleModelValidator := NewArticleModelValidatorFillWith(articleModel)
 	if err := articleModelValidator.Bind(c); err != nil {
+		fmt.Println("Panic", err)
+		// TODO fix panic on incorrect json
+		//example '{"article": {"description": "Ever wonder how1?"}}'
 		c.JSON(http.StatusUnprocessableEntity, common.NewValidatorError(err))
 		return
 	}
