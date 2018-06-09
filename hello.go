@@ -3,28 +3,17 @@ package main
 import (
 	"fmt"
 
+	"github.com/recoilme/slowpoke"
+
 	"gopkg.in/gin-gonic/gin.v1"
 
-	"github.com/jinzhu/gorm"
-	"github.com/wangzitian0/golang-gin-starter-kit/articles"
-	"github.com/wangzitian0/golang-gin-starter-kit/common"
-	"github.com/wangzitian0/golang-gin-starter-kit/users"
+	"github.com/recoilme/golang-gin-realworld-example-app/articles"
+	"github.com/recoilme/golang-gin-realworld-example-app/users"
 )
-
-func Migrate(db *gorm.DB) {
-	users.AutoMigrate()
-	db.AutoMigrate(&articles.ArticleModel{})
-	db.AutoMigrate(&articles.TagModel{})
-	db.AutoMigrate(&articles.FavoriteModel{})
-	db.AutoMigrate(&articles.ArticleUserModel{})
-	db.AutoMigrate(&articles.CommentModel{})
-}
 
 func main() {
 
-	db := common.Init()
-	Migrate(db)
-	defer db.Close()
+	defer slowpoke.CloseAll()
 
 	r := gin.Default()
 
@@ -49,15 +38,14 @@ func main() {
 	})
 
 	// test 1 to 1
-	tx1 := db.Begin()
+
 	userA := users.UserModel{
 		Username: "AAAAAAAAAAAAAAAA",
 		Email:    "aaaa@g.cn",
 		Bio:      "hehddeda",
 		Image:    nil,
 	}
-	tx1.Save(&userA)
-	tx1.Commit()
+
 	fmt.Println(userA)
 
 	//db.Save(&ArticleUserModel{

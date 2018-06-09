@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jinzhu/gorm"
 	sp "github.com/recoilme/slowpoke"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -44,7 +43,6 @@ type UserModel struct {
 //
 // More details about gorm.Model: http://jinzhu.me/gorm/models.html#conventions
 type FollowModel struct {
-	gorm.Model
 	Following    UserModel
 	FollowingID  uint32
 	FollowedBy   UserModel
