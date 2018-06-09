@@ -167,7 +167,7 @@ func ArticleCommentCreate(c *gin.Context) {
 	}
 	commentModelValidator.commentModel.Article = articleModel
 
-	if err := SaveOne(&commentModelValidator.commentModel); err != nil {
+	if err := SaveOneComment(&commentModelValidator.commentModel); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, common.NewError("database", err))
 		return
 	}

@@ -1,12 +1,20 @@
 package articles
 
 import (
+	"encoding/binary"
+	"errors"
 	_ "fmt"
 	"strconv"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
+	sp "github.com/recoilme/slowpoke"
+)
+
+const (
+	dbSlug    = "db/slug"
+	dbCounter = "db/counter"
+	dbArticle = "db/article"
 )
 
 type ArticleModel struct {
@@ -39,7 +47,6 @@ type FavoriteModel struct {
 }
 
 type TagModel struct {
-	gorm.Model
 	Tag           string         `gorm:"unique_index"`
 	ArticleModels []ArticleModel `gorm:"many2many:article_tags;"`
 }
@@ -117,15 +124,78 @@ func (article ArticleModel) unFavoriteBy(user ArticleUserModel) (err error) {
 	return err
 }
 
-func SaveOne(data interface{}) (err error) {
-	/*
-		db := common.GetDB()
-		err := db.Save(data).Error
-	*/
+func checkSlug(article *ArticleModel) error {
+	// check slug
+	if article == nil || article.Slug == "" {
+		return errors.New("UNIQUE constraint failed: article_model.slug")
+	}
+	return nil
+}
+
+// checkArticleConstr - check new article slug
+func checkArticleConstr(article *ArticleModel) (err error) {
+	err = checkSlug(article)
+	if err != nil {
+		return err
+	}
+	has, err := sp.Has(dbSlug, []byte(article.Slug))
+	if err != nil {
+		return err
+	}
+	if has {
+		return errors.New("UNIQUE constraint failed: article_model.slug")
+	}
 	return err
 }
 
-func FindOneArticle(condition interface{}) (model ArticleModel, err error) {
+func SaveOne(article *ArticleModel) (err error) {
+	err = checkArticleConstr(article)
+	if err != nil {
+		return err
+	}
+
+	if article.ID == 0 {
+		// new article
+		aid, err := sp.Counter(dbCounter, []byte("aid"))
+		if err != nil {
+			return err
+		}
+		article.ID = uint32(aid)
+		// workaround for sp crash
+		sp.Close(dbCounter)
+	}
+
+	id32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(id32, article.ID)
+
+	// store slug
+	if err = sp.Set(dbSlug, []byte(article.Slug), id32); err != nil {
+		return err
+	}
+
+	// store article
+	if err = sp.SetGob(dbArticle, id32, article); err != nil {
+		return err
+	}
+	return err
+}
+
+func SaveOneComment(comment *CommentModel) (err error) {
+	return err
+}
+
+func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
+	err = checkSlug(article)
+	if err != nil {
+		return model, err
+	}
+	aid, err := sp.Get(dbSlug, []byte(article.Slug))
+	if err != nil {
+		return model, err
+	}
+	if err = sp.GetGob(dbArticle, aid, &model); err != nil {
+		return model, err
+	}
 
 	/*
 		db := common.GetDB()
