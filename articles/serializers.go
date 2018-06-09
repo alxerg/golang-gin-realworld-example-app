@@ -45,7 +45,7 @@ type ArticleSerializer struct {
 }
 
 type ArticleResponse struct {
-	ID             uint                  `json:"-"`
+	ID             uint32                `json:"-"`
 	Title          string                `json:"title"`
 	Slug           string                `json:"slug"`
 	Description    string                `json:"description"`
@@ -107,7 +107,7 @@ type CommentsSerializer struct {
 }
 
 type CommentResponse struct {
-	ID        uint                  `json:"id"`
+	ID        uint32                `json:"id"`
 	Body      string                `json:"body"`
 	CreatedAt string                `json:"createdAt"`
 	UpdatedAt string                `json:"updatedAt"`

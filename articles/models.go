@@ -3,25 +3,27 @@ package articles
 import (
 	_ "fmt"
 	"strconv"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
 )
 
 type ArticleModel struct {
-	gorm.Model
+	ID          uint32
 	Slug        string `gorm:"unique_index"`
 	Title       string
 	Description string `gorm:"size:2048"`
 	Body        string `gorm:"size:2048"`
 	Author      ArticleUserModel
 	AuthorID    uint32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 	Tags        []TagModel     `gorm:"many2many:article_tags;"`
 	Comments    []CommentModel `gorm:"ForeignKey:ArticleID"`
 }
 
 type ArticleUserModel struct {
-	gorm.Model
 	UserModel      users.UserModel
 	UserModelID    uint32
 	ArticleModels  []ArticleModel  `gorm:"ForeignKey:AuthorID"`
@@ -29,7 +31,7 @@ type ArticleUserModel struct {
 }
 
 type FavoriteModel struct {
-	gorm.Model
+	ID           uint32
 	Favorite     ArticleModel
 	FavoriteID   uint32
 	FavoriteBy   ArticleUserModel
@@ -43,17 +45,20 @@ type TagModel struct {
 }
 
 type CommentModel struct {
-	gorm.Model
+	ID        uint32
 	Article   ArticleModel
 	ArticleID uint32
 	Author    ArticleUserModel
 	AuthorID  uint32
 	Body      string `gorm:"size:2048"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func GetArticleUserModel(userModel users.UserModel) ArticleUserModel {
 	var articleUserModel ArticleUserModel
 	if userModel.ID == 0 {
+
 		return articleUserModel
 	}
 	/*
