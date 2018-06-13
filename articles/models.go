@@ -1,8 +1,11 @@
 package articles
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"errors"
+	"fmt"
 	_ "fmt"
 	"strconv"
 	"time"
@@ -15,6 +18,7 @@ const (
 	dbSlug    = "db/article/slug"
 	dbCounter = "db/article/counter"
 	dbArticle = "db/article/article"
+	dbTag     = "db/article/tag"
 )
 
 type ArticleModel struct {
@@ -47,8 +51,9 @@ type FavoriteModel struct {
 }
 
 type TagModel struct {
-	Tag           string         `gorm:"unique_index"`
-	ArticleModels []ArticleModel `gorm:"many2many:article_tags;"`
+	ID  uint32
+	Tag string `gorm:"unique_index"`
+	//ArticleModels []ArticleModel `gorm:"many2many:article_tags;"`
 }
 
 type CommentModel struct {
@@ -175,9 +180,18 @@ func SaveOne(article *ArticleModel) (err error) {
 	}
 
 	// store article
+	//fmt.Println(id32, article)
 	if err = sp.SetGob(dbArticle, id32, article); err != nil {
 		return err
 	}
+	/*
+		fmt.Println("id32", id32)
+		var a ArticleModel
+		sp.GetGob(dbArticle, id32, &a)
+		fmt.Println("a", a)
+		k, _ := sp.Keys(dbArticle, nil, uint32(0), uint32(0), false)
+		fmt.Println("k", k)
+	*/
 	return err
 }
 
@@ -194,6 +208,7 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 	if err != nil {
 		return model, err
 	}
+	//fmt.Println("aid", aid)
 	if err = sp.GetGob(dbArticle, aid, &model); err != nil {
 		return model, err
 	}
@@ -228,7 +243,7 @@ func getAllTags() (models []TagModel, err error) {
 func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleModel, int, error) {
 	//db := common.GetDB()
 	var models []ArticleModel
-	var count int
+	var err error
 
 	offset_int, err := strconv.Atoi(offset)
 	if err != nil {
@@ -241,6 +256,30 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 	}
 	_ = limit_int
 	_ = offset_int
+	keys, err := sp.Keys(dbArticle, nil, uint32(limit_int), uint32(offset_int), false)
+	fmt.Println(keys, err)
+	if err != nil {
+		return models, 0, err
+	}
+	for _, key := range keys {
+		var model ArticleModel
+		k := make([]byte, 4)
+		buf := bytes.Buffer{}
+		buf.Write(key)
+		if err := gob.NewDecoder(&buf).Decode(&k); err == nil {
+			err := sp.GetGob(dbArticle, k, &model)
+			//fmt.Println(key, err, model)
+			if err != nil {
+				break
+			}
+		} else {
+			fmt.Println("kerr", err)
+		}
+
+		models = append(models, model)
+	}
+	cnt, _ := sp.Count(dbArticle)
+	return models, int(cnt), err
 	/*
 		tx := db.Begin()
 		if tag != "" {
@@ -288,7 +327,6 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 		}
 		err = tx.Commit().Error
 	*/
-	return models, count, err
 }
 
 func (self *ArticleUserModel) GetArticleFeed(limit, offset string) ([]ArticleModel, int, error) {
