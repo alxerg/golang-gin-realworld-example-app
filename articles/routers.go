@@ -3,6 +3,7 @@ package articles
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -88,6 +89,7 @@ func ArticleRetrieve(c *gin.Context) {
 		return
 	}
 	articleModel, err := FindOneArticle(&ArticleModel{Slug: slug})
+	log.Println("ArticleRetrieve", "articleModel", articleModel, err)
 	if err != nil {
 		c.JSON(http.StatusNotFound, common.NewError("articles", errors.New("Invalid slug")))
 		return
@@ -160,6 +162,7 @@ func ArticleUnfavorite(c *gin.Context) {
 func ArticleCommentCreate(c *gin.Context) {
 	slug := c.Param("slug")
 	articleModel, err := FindOneArticle(&ArticleModel{Slug: slug})
+	//fmt.Println("ArticleCommentCreate", articleModel)
 	if err != nil {
 		c.JSON(http.StatusNotFound, common.NewError("comment", errors.New("Invalid slug")))
 		return
@@ -170,7 +173,7 @@ func ArticleCommentCreate(c *gin.Context) {
 		return
 	}
 	commentModelValidator.commentModel.Article = articleModel
-
+	//fmt.Println("ArticleCommentCreate commentModelValidator.commentModel.Article", articleModel)
 	if err := SaveOneComment(&commentModelValidator.commentModel); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, common.NewError("database", err))
 		return
@@ -186,7 +189,7 @@ func ArticleCommentDelete(c *gin.Context) {
 		c.JSON(http.StatusNotFound, common.NewError("comment", errors.New("Invalid id")))
 		return
 	}
-	err = DeleteCommentModel([]uint{id})
+	err = DeleteCommentModel(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, common.NewError("comment", errors.New("Invalid id")))
 		return

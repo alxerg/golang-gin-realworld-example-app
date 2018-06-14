@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	_ "fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -19,6 +20,7 @@ const (
 	dbCounter = "db/article/counter"
 	dbArticle = "db/article/article"
 	dbTag     = "db/article/tag"
+	dbComment = "db/article/comment"
 )
 
 type ArticleModel struct {
@@ -33,6 +35,7 @@ type ArticleModel struct {
 	UpdatedAt   time.Time
 	Tags        []TagModel     `gorm:"many2many:article_tags;"`
 	Comments    []CommentModel `gorm:"ForeignKey:ArticleID"`
+	CommentsIds []uint32
 }
 
 type ArticleUserModel struct {
@@ -51,7 +54,6 @@ type FavoriteModel struct {
 }
 
 type TagModel struct {
-	ID  uint32
 	Tag string `gorm:"unique_index"`
 	//ArticleModels []ArticleModel `gorm:"many2many:article_tags;"`
 }
@@ -181,7 +183,7 @@ func SaveOne(article *ArticleModel) (err error) {
 
 	// store article
 	//fmt.Println(id32, article)
-	if err = sp.SetGob(dbArticle, id32, article); err != nil {
+	if err = sp.SetGob(dbArticle, article.ID, article); err != nil {
 		return err
 	}
 	/*
@@ -196,10 +198,51 @@ func SaveOne(article *ArticleModel) (err error) {
 }
 
 func SaveOneComment(comment *CommentModel) (err error) {
+	if comment.ID == 0 {
+		// new comment
+		cid, err := sp.Counter(dbCounter, []byte("cid"))
+		if err != nil {
+			return err
+		}
+		comment.ID = uint32(cid)
+		comment.CreatedAt = time.Now()
+		comment.UpdatedAt = time.Now()
+		// workaround for sp crash
+		sp.Close(dbCounter)
+	}
+
+	id32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(id32, comment.ID)
+
+	// store comment
+	//fmt.Println(id32, article)
+	if err = sp.SetGob(dbComment, comment.ID, comment); err != nil {
+		return err
+	}
+	var cids = comment.Article.CommentsIds
+
+	var isNew = true
+	for _, val := range comment.Article.CommentsIds {
+		if val == comment.ID {
+			isNew = false
+			break
+		}
+	}
+
+	if isNew {
+		cids = append(cids, comment.ID)
+		comment.Article.CommentsIds = cids
+		//aid32 := make([]byte, 4)
+		//binary.BigEndian.PutUint32(aid32, comment.Article.ID)
+		if err = sp.SetGob(dbArticle, comment.Article.ID, comment.Article); err != nil {
+			return err
+		}
+	}
 	return err
 }
 
 func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
+	//log.Println("FindOneArticle")
 	err = checkSlug(article)
 	if err != nil {
 		return model, err
@@ -208,16 +251,30 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 	if err != nil {
 		return model, err
 	}
-	//fmt.Println("aid", aid)
-	if err = sp.GetGob(dbArticle, aid, &model); err != nil {
+	//log.Println(aid)
+
+	err = sp.GetGob(dbArticle, binary.BigEndian.Uint32(aid), &model)
+	//log.Println("model", model)
+	//	}
+	if err != nil {
 		return model, err
 	}
-
-	// update author? but author may change username..
 	return model, err
 }
 
 func (self *ArticleModel) getComments() (err error) {
+	cids := self.CommentsIds
+
+	var comments []CommentModel
+	for _, cid := range cids {
+		//cid32 := make([]byte, 4)
+		//binary.BigEndian.PutUint32(cid32, cid)
+		var com CommentModel
+		if errCom := sp.GetGob(dbComment, cid, &com); errCom == nil {
+			comments = append(comments, com)
+		}
+	}
+	self.Comments = comments
 	/*
 		db := common.GetDB()
 		tx := db.Begin()
@@ -257,26 +314,26 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 	_ = limit_int
 	_ = offset_int
 	keys, err := sp.Keys(dbArticle, nil, uint32(limit_int), uint32(offset_int), false)
-	fmt.Println(keys, err)
+	log.Println("keys", keys, err)
 	if err != nil {
 		return models, 0, err
 	}
 	for _, key := range keys {
 		var model ArticleModel
-		k := make([]byte, 4)
+		var k uint32
 		buf := bytes.Buffer{}
 		buf.Write(key)
 		if err := gob.NewDecoder(&buf).Decode(&k); err == nil {
+			//fmt.Println(key, err)
 			err := sp.GetGob(dbArticle, k, &model)
 			//fmt.Println(key, err, model)
 			if err != nil {
+				fmt.Println("kerr", err)
 				break
 			}
-		} else {
-			fmt.Println("kerr", err)
+			models = append(models, model)
 		}
 
-		models = append(models, model)
 	}
 	cnt, _ := sp.Count(dbArticle)
 	return models, int(cnt), err
@@ -380,6 +437,24 @@ func (model *ArticleModel) setTags(tags []string) error {
 		}
 		model.Tags = tagList
 	*/
+	/*
+		var tagList []TagModel
+		for _, tag := range tags {
+			var tagModel TagModel
+			var err error
+			var tagList []TagModel
+
+			exists, err := sp.Has(dbTag, []byte(tag))
+			if exists == false && err == nil {
+				err = sp.Set(dbTag, []byte(tag), nil)
+			}
+			if err == nil {
+				tagModel.Tag = tag
+				tagList = append(tagList, tagModel)
+			}
+		}
+		model.Tags = tagList
+	*/
 	return nil
 }
 
@@ -397,13 +472,54 @@ func DeleteArticleModel(condition interface{}) (err error) {
 		db := common.GetDB()
 		err := db.Where(condition).Delete(ArticleModel{}).Error
 	*/
+	log.Println("DeleteArticleModel")
+	article := condition.(*ArticleModel)
+
+	err = checkSlug(article)
+	if err != nil {
+		return err
+	}
+	aid, err := sp.Get(dbSlug, []byte(article.Slug))
+	if err != nil {
+		return err
+	}
+
+	_, err = sp.Delete(dbSlug, []byte(article.Slug))
+	if err != nil {
+		return err
+	}
+
+	bufKey := bytes.Buffer{}
+	err = gob.NewEncoder(&bufKey).Encode(binary.BigEndian.Uint32(aid))
+	if err != nil {
+		return err
+	}
+	_, err = sp.Delete(dbArticle, bufKey.Bytes())
+	if err != nil {
+		return err
+	}
+
+	//todo comments?
+
 	return err
 }
 
-func DeleteCommentModel(condition interface{}) (err error) {
+func DeleteCommentModel(id uint) (err error) {
+
+	bufKey := bytes.Buffer{}
+
+	err = gob.NewEncoder(&bufKey).Encode(uint32(id))
+	//fmt.Println("Bytes", bufKey.Bytes())
+	sp.Delete(dbComment, bufKey.Bytes())
 	/*
-		db := common.GetDB()
-		err := db.Where(condition).Delete(CommentModel{}).Error
+		id32 := make([]byte, 4)
+		binary.BigEndian.PutUint32(id32, uint32(id))
+		log.Println("DeleteCommentModel", id32)
+		_, err = sp.Delete(dbComment, id32)
+		log.Println("DeleteCommentModel", err)
+
+			db := common.GetDB()
+			err := db.Where(condition).Delete(CommentModel{}).Error
 	*/
 	return err
 }
