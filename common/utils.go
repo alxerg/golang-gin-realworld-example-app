@@ -88,3 +88,8 @@ func Uint32toBin(id uint32) []byte {
 	binary.BigEndian.PutUint32(id32, id)
 	return id32
 }
+
+func BintoUint32(b []byte) uint32 {
+
+	return binary.BigEndian.Uint32(b)
+}

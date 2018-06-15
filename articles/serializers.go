@@ -1,6 +1,8 @@
 package articles
 
 import (
+	"fmt"
+
 	"github.com/gosimple/slug"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
 	"gopkg.in/gin-gonic/gin.v1"
@@ -64,6 +66,7 @@ type ArticlesSerializer struct {
 }
 
 func (s *ArticleSerializer) Response() ArticleResponse {
+	fmt.Printf("Context:%+v\n", s.C)
 	myUserModel := s.C.MustGet("my_user_model").(users.UserModel)
 	authorSerializer := ArticleUserSerializer{s.C, s.Author}
 	response := ArticleResponse{

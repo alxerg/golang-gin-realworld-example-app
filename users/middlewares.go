@@ -1,6 +1,7 @@
 package users
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -51,6 +52,11 @@ func UpdateContextUserModel(c *gin.Context, my_user_id uint32) {
 	}
 	c.Set("my_user_id", my_user_id)
 	c.Set("my_user_model", myUserModel)
+
+	fmt.Println()
+	fmt.Println("UpdateContextUserModel", my_user_id)
+	fmt.Printf("%+v\n\n", myUserModel)
+	fmt.Println()
 }
 
 // You can custom middlewares yourself as the doc: https://github.com/gin-gonic/gin#custom-middleware
@@ -70,7 +76,7 @@ func AuthMiddleware(auto401 bool) gin.HandlerFunc {
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 			my_user_id := uint32(claims["id"].(float64))
-			//fmt.Println(my_user_id,claims["id"])
+			fmt.Println("AuthMiddleware:", my_user_id, claims["id"])
 			UpdateContextUserModel(c, my_user_id)
 		}
 	}

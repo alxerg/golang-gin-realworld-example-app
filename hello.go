@@ -52,7 +52,7 @@ func main() {
 func InitRouter(r *gin.Engine) {
 	r.Use(CORSMiddleware())
 	v1 := r.Group("/api")
-	//v1.Use(CORSMiddleware())
+
 	users.UsersRegister(v1.Group("/users"))
 	v1.Use(users.AuthMiddleware(false))
 	articles.ArticlesAnonymousRegister(v1.Group("/articles"))

@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	dbSlug      = "db/article/slug"
-	dbCounter   = "db/article/counter"
-	dbArticle   = "db/article/article"
-	dbTag       = "db/article/tag"
-	dbComment   = "db/article/comment"
-	dbArticleID = "db/article/article/%d"
+	dbSlug       = "db/article/slug"
+	dbCounter    = "db/article/counter"
+	dbArticle    = "db/article/article"
+	dbTag        = "db/article/tag"
+	dbComment    = "db/article/comment"
+	dbArticleUid = "db/article/uid/%d"
 )
 
 type ArticleModel struct {
@@ -160,34 +160,49 @@ func checkArticleConstr(article *ArticleModel) (err error) {
 }
 
 func SaveOne(article *ArticleModel) (err error) {
-	err = checkArticleConstr(article)
-	if err != nil {
-		return err
-	}
-
 	if article.ID == 0 {
 		// new article
+		err = checkArticleConstr(article)
+		if err != nil {
+			return err
+		}
 		aid, err := sp.Counter(dbCounter, []byte("aid"))
 		if err != nil {
 			return err
 		}
 		article.ID = uint32(aid)
-		// workaround for sp crash
-		sp.Close(dbCounter)
+		article.CreatedAt = time.Now()
+		article.UpdatedAt = time.Now()
+		article.AuthorID = article.Author.UserModel.ID
+
+	} else {
+		err = checkSlug(article)
+		if err != nil {
+			return err
+		}
+		article.UpdatedAt = time.Now()
+		//TODO update slug if change
 	}
 
 	id32 := common.Uint32toBin(article.ID)
-	//make([]byte, 4)
-	//binary.BigEndian.PutUint32(id32, article.ID)
 
 	// store slug
 	if err = sp.Set(dbSlug, []byte(article.Slug), id32); err != nil {
 		return err
 	}
 
-	// store article
-	fmt.Println(id32, article.AuthorID)
-	if err = sp.SetGob(dbArticle, id32, article); err != nil {
+	// store articleid -> userid
+	//fmt.Println(id32, article.AuthorID)
+	//fmt.Printf("%+v\n", article.Author)
+	if err = sp.Set(dbArticle, id32, common.Uint32toBin(article.AuthorID)); err != nil {
+		return err
+	}
+
+	// Store every article by uid in separate file
+
+	f := fmt.Sprintf(dbArticleUid, article.AuthorID)
+	//log.Println(f)
+	if err = sp.SetGob(f, id32, article); err != nil {
 		return err
 	}
 	/*
@@ -246,7 +261,7 @@ func SaveOneComment(comment *CommentModel) (err error) {
 }
 
 func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
-	//log.Println("FindOneArticle")
+	log.Println("FindOneArticle")
 	err = checkSlug(article)
 	if err != nil {
 		return model, err
@@ -256,10 +271,17 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 		return model, err
 	}
 	//log.Println(aid)
+	// Get uid
+	uid, err := sp.Get(dbArticle, aid)
+	if err != nil {
+		return model, err
+	}
+	//log.Println("uid", uid)
+	f := fmt.Sprintf(dbArticleUid, common.BintoUint32(uid))
+	//log.Println(f)
+	err = sp.GetGob(f, aid, &model)
+	log.Printf("model:%+v\n", model)
 
-	err = sp.GetGob(dbArticle, aid, &model)
-	//log.Println("model", model)
-	//	}
 	if err != nil {
 		return model, err
 	}

@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
@@ -81,6 +82,11 @@ func UsersRegistration(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, common.NewError("database", err))
 		return
 	}
+	fmt.Println()
+	fmt.Println("UsersRegistration")
+	fmt.Printf("%+v\n\n", userModelValidator.userModel)
+	fmt.Println()
+
 	c.Set("my_user_model", userModelValidator.userModel)
 	serializer := UserSerializer{c}
 	c.JSON(http.StatusCreated, gin.H{"user": serializer.Response()})
