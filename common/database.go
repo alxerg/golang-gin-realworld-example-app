@@ -5,8 +5,6 @@ import (
 	"os"
 
 	"github.com/recoilme/slowpoke"
-
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 type Database struct {
@@ -38,7 +36,7 @@ func TestDBInit() *slowpoke.Db {
 }
 
 // Delete the database after running testing cases.
-func TestDBFree(test_db *slowpoke.Db) error {
+func TestDBFree() error {
 	//test_db.Close()
 	os.RemoveAll("./../gorm_test.db")
 	errdir := os.RemoveAll("db")
@@ -48,4 +46,25 @@ func TestDBFree(test_db *slowpoke.Db) error {
 // Using this function to get a connection, you can create your connection pool here.
 func GetDB() *slowpoke.Db {
 	return DB
+}
+
+//Reset test DB and create new one with mock data
+func ResetUsersDBWithMock() {
+
+	dbUser := "db/user"
+	dbUserName := "db/username"
+	dbUserMail := "db/usermail"
+	dbCounter := "db/counter"
+	dbMasterSlave := "db/masterslave"
+	dbSlaveMaster := "db/slavemaster"
+
+	slowpoke.CloseAll()
+	slowpoke.DeleteFile(dbCounter)
+	slowpoke.DeleteFile(dbMasterSlave)
+	slowpoke.DeleteFile(dbSlaveMaster)
+	slowpoke.DeleteFile(dbUser)
+	slowpoke.DeleteFile(dbUserMail)
+	slowpoke.DeleteFile(dbUserName)
+	TestDBFree()
+
 }

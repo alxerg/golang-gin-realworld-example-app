@@ -62,6 +62,11 @@ func userModelMocker(n int) []UserModel {
 
 }
 
+//Reset test DB and create new one with mock data
+func resetDBWithMock() {
+	common.ResetUsersDBWithMock()
+	userModelMocker(3)
+}
 func TestUserModel(t *testing.T) {
 	asserts := assert.New(t)
 
@@ -105,21 +110,6 @@ func TestUserModel(t *testing.T) {
 	asserts.EqualValues(c, a.GetFollowings()[0], "GetFollowings should be right after a unFollowing b")
 	asserts.Equal(false, a.isFollowing(b), "isFollowing should be right after a unFollowing b")
 
-}
-
-//Reset test DB and create new one with mock data
-func resetDBWithMock() {
-	slowpoke.CloseAll()
-	slowpoke.DeleteFile(dbCounter)
-	slowpoke.DeleteFile(dbMasterSlave)
-	slowpoke.DeleteFile(dbSlaveMaster)
-	slowpoke.DeleteFile(dbUser)
-	slowpoke.DeleteFile(dbUserMail)
-	slowpoke.DeleteFile(dbUserName)
-	common.TestDBFree(test_db)
-	test_db = common.TestDBInit()
-	AutoMigrate()
-	userModelMocker(3)
 }
 
 func HeaderTokenMock(req *http.Request, u uint32) {
@@ -277,6 +267,7 @@ var unauthRequestTests = []struct {
 	{
 		func(req *http.Request) {
 			resetDBWithMock()
+
 			HeaderTokenMock(req, 1)
 		},
 		"/profiles/user1",
@@ -512,7 +503,7 @@ func TestMain(m *testing.M) {
 	test_db = common.TestDBInit()
 	AutoMigrate()
 	exitVal := m.Run()
-	common.TestDBFree(test_db)
+	common.TestDBFree()
 	os.Exit(exitVal)
 }
 

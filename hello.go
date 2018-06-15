@@ -16,19 +16,7 @@ func main() {
 	defer slowpoke.CloseAll()
 
 	r := gin.Default()
-	r.Use(CORSMiddleware())
-	v1 := r.Group("/api")
-	//v1.Use(CORSMiddleware())
-	users.UsersRegister(v1.Group("/users"))
-	v1.Use(users.AuthMiddleware(false))
-	articles.ArticlesAnonymousRegister(v1.Group("/articles"))
-	articles.TagsAnonymousRegister(v1.Group("/tags"))
-
-	v1.Use(users.AuthMiddleware(true))
-	users.UserRegister(v1.Group("/user"))
-	users.ProfileRegister(v1.Group("/profiles"))
-
-	articles.ArticlesRegister(v1.Group("/articles"))
+	InitRouter(r)
 
 	testAuth := r.Group("/api/ping")
 
@@ -59,6 +47,22 @@ func main() {
 	//fmt.Println(userAA)
 
 	r.Run() // listen and serve on 0.0.0.0:8080
+}
+
+func InitRouter(r *gin.Engine) {
+	r.Use(CORSMiddleware())
+	v1 := r.Group("/api")
+	//v1.Use(CORSMiddleware())
+	users.UsersRegister(v1.Group("/users"))
+	v1.Use(users.AuthMiddleware(false))
+	articles.ArticlesAnonymousRegister(v1.Group("/articles"))
+	articles.TagsAnonymousRegister(v1.Group("/tags"))
+
+	v1.Use(users.AuthMiddleware(true))
+	users.UserRegister(v1.Group("/user"))
+	users.ProfileRegister(v1.Group("/profiles"))
+
+	articles.ArticlesRegister(v1.Group("/articles"))
 }
 
 func CORSMiddleware() gin.HandlerFunc {

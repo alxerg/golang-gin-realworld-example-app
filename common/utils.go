@@ -2,6 +2,7 @@
 package common
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"time"
@@ -80,4 +81,10 @@ func NewError(key string, err error) CommonError {
 func Bind(c *gin.Context, obj interface{}) error {
 	b := binding.Default(c.Request.Method, c.ContentType())
 	return c.ShouldBindWith(obj, b)
+}
+
+func Uint32toBin(id uint32) []byte {
+	id32 := make([]byte, 4)
+	binary.BigEndian.PutUint32(id32, id)
+	return id32
 }

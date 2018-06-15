@@ -11,16 +11,19 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/recoilme/golang-gin-realworld-example-app/common"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
+
 	sp "github.com/recoilme/slowpoke"
 )
 
 const (
-	dbSlug    = "db/article/slug"
-	dbCounter = "db/article/counter"
-	dbArticle = "db/article/article"
-	dbTag     = "db/article/tag"
-	dbComment = "db/article/comment"
+	dbSlug      = "db/article/slug"
+	dbCounter   = "db/article/counter"
+	dbArticle   = "db/article/article"
+	dbTag       = "db/article/tag"
+	dbComment   = "db/article/comment"
+	dbArticleID = "db/article/article/%d"
 )
 
 type ArticleModel struct {
@@ -173,8 +176,9 @@ func SaveOne(article *ArticleModel) (err error) {
 		sp.Close(dbCounter)
 	}
 
-	id32 := make([]byte, 4)
-	binary.BigEndian.PutUint32(id32, article.ID)
+	id32 := common.Uint32toBin(article.ID)
+	//make([]byte, 4)
+	//binary.BigEndian.PutUint32(id32, article.ID)
 
 	// store slug
 	if err = sp.Set(dbSlug, []byte(article.Slug), id32); err != nil {
@@ -182,8 +186,8 @@ func SaveOne(article *ArticleModel) (err error) {
 	}
 
 	// store article
-	//fmt.Println(id32, article)
-	if err = sp.SetGob(dbArticle, article.ID, article); err != nil {
+	fmt.Println(id32, article.AuthorID)
+	if err = sp.SetGob(dbArticle, id32, article); err != nil {
 		return err
 	}
 	/*
@@ -216,7 +220,7 @@ func SaveOneComment(comment *CommentModel) (err error) {
 
 	// store comment
 	//fmt.Println(id32, article)
-	if err = sp.SetGob(dbComment, comment.ID, comment); err != nil {
+	if err = sp.SetGob(dbComment, id32, comment); err != nil {
 		return err
 	}
 	var cids = comment.Article.CommentsIds
@@ -232,9 +236,9 @@ func SaveOneComment(comment *CommentModel) (err error) {
 	if isNew {
 		cids = append(cids, comment.ID)
 		comment.Article.CommentsIds = cids
-		//aid32 := make([]byte, 4)
-		//binary.BigEndian.PutUint32(aid32, comment.Article.ID)
-		if err = sp.SetGob(dbArticle, comment.Article.ID, comment.Article); err != nil {
+		aid32 := make([]byte, 4)
+		binary.BigEndian.PutUint32(aid32, comment.Article.ID)
+		if err = sp.SetGob(dbArticle, aid32, comment.Article); err != nil {
 			return err
 		}
 	}
@@ -253,7 +257,7 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 	}
 	//log.Println(aid)
 
-	err = sp.GetGob(dbArticle, binary.BigEndian.Uint32(aid), &model)
+	err = sp.GetGob(dbArticle, aid, &model)
 	//log.Println("model", model)
 	//	}
 	if err != nil {
@@ -269,8 +273,9 @@ func (self *ArticleModel) getComments() (err error) {
 	for _, cid := range cids {
 		//cid32 := make([]byte, 4)
 		//binary.BigEndian.PutUint32(cid32, cid)
+		cid32 := common.Uint32toBin(cid)
 		var com CommentModel
-		if errCom := sp.GetGob(dbComment, cid, &com); errCom == nil {
+		if errCom := sp.GetGob(dbComment, cid32, &com); errCom == nil {
 			comments = append(comments, com)
 		}
 	}
@@ -320,19 +325,19 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 	}
 	for _, key := range keys {
 		var model ArticleModel
-		var k uint32
-		buf := bytes.Buffer{}
-		buf.Write(key)
-		if err := gob.NewDecoder(&buf).Decode(&k); err == nil {
-			//fmt.Println(key, err)
-			err := sp.GetGob(dbArticle, k, &model)
-			//fmt.Println(key, err, model)
-			if err != nil {
-				fmt.Println("kerr", err)
-				break
-			}
-			models = append(models, model)
+		//var k uint32
+		//buf := bytes.Buffer{}
+		//buf.Write(key)
+		//if err := gob.NewDecoder(&buf).Decode(&k); err == nil {
+		//fmt.Println(key, err)
+		err := sp.GetGob(dbArticle, key, &model)
+		//fmt.Println(key, err, model)
+		if err != nil {
+			fmt.Println("kerr", err)
+			break
 		}
+		models = append(models, model)
+		//}
 
 	}
 	cnt, _ := sp.Count(dbArticle)
