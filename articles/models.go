@@ -326,43 +326,63 @@ func getAllTags() (models []TagModel, err error) {
 
 func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleModel, int, error) {
 	//db := common.GetDB()
+	log.Println("FindManyArticle")
 	var models []ArticleModel
 	var err error
+	var cnt uint64
+	var offset_int, limit_int int
 
-	offset_int, err := strconv.Atoi(offset)
-	if err != nil {
-		offset_int = 0
-	}
+	limit_int = 20
 
-	limit_int, err := strconv.Atoi(limit)
-	if err != nil {
-		limit_int = 20
-	}
-	_ = limit_int
-	_ = offset_int
-	keys, err := sp.Keys(dbArticle, nil, uint32(limit_int), uint32(offset_int), false)
-	log.Println("keys", keys, err)
-	if err != nil {
-		return models, 0, err
-	}
-	for _, key := range keys {
-		var model ArticleModel
-		//var k uint32
-		//buf := bytes.Buffer{}
-		//buf.Write(key)
-		//if err := gob.NewDecoder(&buf).Decode(&k); err == nil {
-		//fmt.Println(key, err)
-		err := sp.GetGob(dbArticle, key, &model)
-		//fmt.Println(key, err, model)
-		if err != nil {
-			fmt.Println("kerr", err)
-			break
+	offset_int, _ = strconv.Atoi(offset)
+
+	limit_int, _ = strconv.Atoi(limit)
+
+	if tag != "" {
+
+	} else if author != "" {
+		userModel, err := users.FindOneUser(&users.UserModel{Username: author})
+		if err == nil {
+			file := fmt.Sprintf(dbArticleUid, userModel.ID)
+			keys, err := sp.Keys(file, nil, uint32(limit_int), uint32(offset_int), false)
+			for _, key := range keys {
+				var model ArticleModel
+				if err = sp.GetGob(file, key, &model); err != nil {
+					fmt.Println("kerr", err)
+					break
+				}
+				models = append(models, model)
+			}
 		}
-		models = append(models, model)
-		//}
+		//var userModel users.UserModel
+		//tx.Where(users.UserModel{Username: author}).First(&userModel)
+	} else if favorited != "" {
+	} else {
+		//no params
+		log.Println("no params")
+		keys, err := sp.Keys(dbArticle, nil, uint32(limit_int), uint32(offset_int), false)
 
+		if err != nil {
+			return models, 0, err
+		}
+		for _, key := range keys {
+			var model ArticleModel
+
+			uidb, err := sp.Get(dbArticle, key)
+			if err != nil {
+				break
+			}
+			uid := common.BintoUint32(uidb)
+
+			if err = sp.GetGob(fmt.Sprintf(dbArticleUid, uid), key, &model); err != nil {
+				fmt.Println("kerr", err)
+				break
+			}
+			models = append(models, model)
+		}
+		cnt, _ = sp.Count(dbArticle)
 	}
-	cnt, _ := sp.Count(dbArticle)
+	//log.Println("models", err, models)
 	return models, int(cnt), err
 	/*
 		tx := db.Begin()

@@ -50,11 +50,13 @@ func ArticleCreate(c *gin.Context) {
 
 func ArticleList(c *gin.Context) {
 	//condition := ArticleModel{}
+	log.Println("ArticleList")
 	tag := c.Query("tag")
 	author := c.Query("author")
 	favorited := c.Query("favorited")
 	limit := c.Query("limit")
 	offset := c.Query("offset")
+	fmt.Println("params", author, limit)
 	articleModels, modelCount, err := FindManyArticle(tag, author, limit, offset, favorited)
 	if err != nil {
 		c.JSON(http.StatusNotFound, common.NewError("articles", errors.New("Invalid param")))

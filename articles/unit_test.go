@@ -74,7 +74,7 @@ func TestWithoutAuth(t *testing.T) {
 
 	ArticlesRegister(r.Group("/articles"))
 
-	stop := 4
+	stop := 6
 	for num, testData := range unauthRequestTests {
 		if num >= stop {
 			break
@@ -166,5 +166,29 @@ var unauthRequestTests = []struct {
 		http.StatusOK,
 		``,
 		"request should return article",
+	},
+
+	{
+		func(req *http.Request) {
+
+		},
+		"/articles/",
+		"GET",
+		``,
+		http.StatusOK,
+		``,
+		"request should return articles",
+	},
+
+	{
+		func(req *http.Request) {
+
+		},
+		"/articles/?author=user1",
+		"GET",
+		``,
+		http.StatusOK,
+		``,
+		"request should return article by uid",
 	},
 }
