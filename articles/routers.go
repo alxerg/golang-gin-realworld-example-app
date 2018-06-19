@@ -162,9 +162,10 @@ func ArticleUnfavorite(c *gin.Context) {
 }
 
 func ArticleCommentCreate(c *gin.Context) {
+	fmt.Println("ArticleCommentCreate")
 	slug := c.Param("slug")
 	articleModel, err := FindOneArticle(&ArticleModel{Slug: slug})
-	//fmt.Println("ArticleCommentCreate", articleModel)
+	//fmt.Println("ArticleCommentCreate found article")
 	if err != nil {
 		c.JSON(http.StatusNotFound, common.NewError("comment", errors.New("Invalid slug")))
 		return

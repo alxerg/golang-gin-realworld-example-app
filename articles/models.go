@@ -1,9 +1,6 @@
 package articles
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	_ "fmt"
@@ -217,6 +214,7 @@ func SaveOne(article *ArticleModel) (err error) {
 }
 
 func SaveOneComment(comment *CommentModel) (err error) {
+	fmt.Println("\n\nSaveOneComment")
 	if comment.ID == 0 {
 		// new comment
 		cid, err := sp.Counter(dbCounter, []byte("cid"))
@@ -230,8 +228,7 @@ func SaveOneComment(comment *CommentModel) (err error) {
 		sp.Close(dbCounter)
 	}
 
-	id32 := make([]byte, 4)
-	binary.BigEndian.PutUint32(id32, comment.ID)
+	id32 := common.Uint32toBin(comment.ID)
 
 	// store comment
 	//fmt.Println(id32, article)
@@ -239,6 +236,9 @@ func SaveOneComment(comment *CommentModel) (err error) {
 		return err
 	}
 	var cids = comment.Article.CommentsIds
+	//fmt.Printf("\n\ncomment.Article %+v\n", comment.Article)
+
+	//fmt.Printf("\n\ncomment.Author.UserModel %+v\n", comment.Author.UserModel)
 
 	var isNew = true
 	for _, val := range comment.Article.CommentsIds {
@@ -250,12 +250,16 @@ func SaveOneComment(comment *CommentModel) (err error) {
 
 	if isNew {
 		cids = append(cids, comment.ID)
+		//log.Println("is new cids", cids)
 		comment.Article.CommentsIds = cids
-		aid32 := make([]byte, 4)
-		binary.BigEndian.PutUint32(aid32, comment.Article.ID)
-		if err = sp.SetGob(dbArticle, aid32, comment.Article); err != nil {
+		aid32 := common.Uint32toBin(comment.Article.ID)
+
+		f := fmt.Sprintf(dbArticleUid, comment.Article.ID)
+		//log.Println(f)
+		if err = sp.SetGob(f, aid32, comment.Article); err != nil {
 			return err
 		}
+
 	}
 	return err
 }
@@ -280,7 +284,7 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 	f := fmt.Sprintf(dbArticleUid, common.BintoUint32(uid))
 	//log.Println(f)
 	err = sp.GetGob(f, aid, &model)
-	log.Printf("model:%+v\n", model)
+	//log.Printf("model:%+v\n", model)
 
 	if err != nil {
 		return model, err
@@ -290,7 +294,7 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 
 func (self *ArticleModel) getComments() (err error) {
 	cids := self.CommentsIds
-
+	log.Println("getComments:", cids)
 	var comments []CommentModel
 	for _, cid := range cids {
 		//cid32 := make([]byte, 4)
@@ -515,10 +519,7 @@ func (model *ArticleModel) Update(article ArticleModel) (err error) {
 }
 
 func DeleteArticleModel(condition interface{}) (err error) {
-	/*
-		db := common.GetDB()
-		err := db.Where(condition).Delete(ArticleModel{}).Error
-	*/
+
 	log.Println("DeleteArticleModel")
 	article := condition.(*ArticleModel)
 
@@ -536,12 +537,7 @@ func DeleteArticleModel(condition interface{}) (err error) {
 		return err
 	}
 
-	bufKey := bytes.Buffer{}
-	err = gob.NewEncoder(&bufKey).Encode(binary.BigEndian.Uint32(aid))
-	if err != nil {
-		return err
-	}
-	_, err = sp.Delete(dbArticle, bufKey.Bytes())
+	_, err = sp.Delete(dbArticle, aid)
 	if err != nil {
 		return err
 	}
@@ -553,20 +549,6 @@ func DeleteArticleModel(condition interface{}) (err error) {
 
 func DeleteCommentModel(id uint) (err error) {
 
-	bufKey := bytes.Buffer{}
-
-	err = gob.NewEncoder(&bufKey).Encode(uint32(id))
-	//fmt.Println("Bytes", bufKey.Bytes())
-	sp.Delete(dbComment, bufKey.Bytes())
-	/*
-		id32 := make([]byte, 4)
-		binary.BigEndian.PutUint32(id32, uint32(id))
-		log.Println("DeleteCommentModel", id32)
-		_, err = sp.Delete(dbComment, id32)
-		log.Println("DeleteCommentModel", err)
-
-			db := common.GetDB()
-			err := db.Where(condition).Delete(CommentModel{}).Error
-	*/
+	_, err = sp.Delete(dbComment, common.Uint32toBin(uint32(id)))
 	return err
 }

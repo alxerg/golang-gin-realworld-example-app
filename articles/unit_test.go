@@ -52,16 +52,6 @@ func TestWithoutAuth(t *testing.T) {
 	//resetDB()
 
 	r := gin.New()
-	/*
-		users.UsersRegister(r.Group("/users"))
-
-		ArticlesAnonymousRegister(r.Group("/articles"))
-		r.Use(users.AuthMiddleware(true))
-		users.UserRegister(r.Group("/user"))
-		users.ProfileRegister(r.Group("/profiles"))
-
-		ArticlesRegister(r.Group("/articles"))
-	*/
 
 	users.UsersRegister(r.Group("/users"))
 	r.Use(users.AuthMiddleware(false))
@@ -74,7 +64,7 @@ func TestWithoutAuth(t *testing.T) {
 
 	ArticlesRegister(r.Group("/articles"))
 
-	stop := 6
+	stop := 19
 	for num, testData := range unauthRequestTests {
 		if num >= stop {
 			break
@@ -90,7 +80,7 @@ func TestWithoutAuth(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		res := asserts.Equal(testData.expectedCode, w.Code, "Response Status - "+testData.msg)
-		fmt.Println("\n\nTest:", num, " Response Content - ", w.Body.String())
+		fmt.Println("\n\nTest:", num, testData.msg, " Response Content - ", w.Body.String())
 		fmt.Println()
 
 		asserts.Regexp(testData.responseRegexg, w.Body.String(), "Response Content - "+testData.msg)
@@ -128,6 +118,17 @@ var unauthRequestTests = []struct {
 
 	{
 		func(req *http.Request) {
+		},
+		"/users/",
+		"POST",
+		`{"user":{"username": "user2","email": "e2@mail.ru","password": "password","image":"http://tggram.com/media/recoilmeblog/profile_photos/file_654897.jpg"}}`,
+		http.StatusCreated,
+		``,
+		"valid data and should return StatusCreated",
+	},
+
+	{
+		func(req *http.Request) {
 			HeaderTokenMock(req, 1)
 		},
 		"/profiles/user1",
@@ -153,7 +154,7 @@ var unauthRequestTests = []struct {
 		}`,
 		http.StatusCreated,
 		``,
-		"request should return article",
+		"request should create article",
 	},
 
 	{
@@ -170,6 +171,24 @@ var unauthRequestTests = []struct {
 
 	{
 		func(req *http.Request) {
+			HeaderTokenMock(req, 2)
+		},
+		"/articles/",
+		"POST",
+		`{
+			"article": {
+				"title": "How are you?",
+				"description": "how?",
+				"body": "I'm fine, thank you"
+			}
+		}`,
+		http.StatusCreated,
+		``,
+		"request should create second article",
+	},
+
+	{
+		func(req *http.Request) {
 
 		},
 		"/articles/",
@@ -177,18 +196,113 @@ var unauthRequestTests = []struct {
 		``,
 		http.StatusOK,
 		``,
-		"request should return articles",
+		"request should return 2 articles",
 	},
 
 	{
 		func(req *http.Request) {
 
 		},
-		"/articles/?author=user1",
+		"/articles/?author=user2",
 		"GET",
 		``,
 		http.StatusOK,
 		``,
-		"request should return article by uid",
+		"request should return article by uid2",
+	},
+
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 2)
+		},
+		"/articles/how-to-train-your-dragon/comments",
+		"POST",
+		`{
+			"comment": {
+				"body": "His name was my name too."
+			}
+		}`,
+		http.StatusCreated,
+		``,
+		"request should create comment from 2",
+	},
+	//second comment
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 1)
+		},
+		"/articles/how-to-train-your-dragon/comments",
+		"POST",
+		`{
+			"comment": {
+				"body": "Second comment from user1."
+			}
+		}`,
+		http.StatusCreated,
+		``,
+		"request should create comment from 1",
+	},
+	//get comments anonim
+	{
+		func(req *http.Request) {
+
+		},
+		"/articles/how-to-train-your-dragon/comments",
+		"GET",
+		``,
+		http.StatusOK,
+		``,
+		"request should return 2 comments",
+	},
+
+	//delete comment 2
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 1)
+		},
+		"/articles/how-to-train-your-dragon/comments/2",
+		"DELETE",
+		``,
+		http.StatusOK,
+		``,
+		"request should delete second comment",
+	},
+
+	//get comments anonim
+	{
+		func(req *http.Request) {
+
+		},
+		"/articles/how-to-train-your-dragon/comments",
+		"GET",
+		``,
+		http.StatusOK,
+		``,
+		"request should return 1 comments",
+	},
+
+	//delete article 2
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 1)
+		},
+		"/articles/how-are-you",
+		"DELETE",
+		``,
+		http.StatusOK,
+		``,
+		"request should delete article 2",
+	},
+
+	{
+		func(req *http.Request) {
+
+		},
+		"/articles/",
+		"GET",
+		``,
+		http.StatusOK,
+		``,
+		"request should return 1 articles",
 	},
 }
