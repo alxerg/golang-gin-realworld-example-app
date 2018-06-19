@@ -23,6 +23,8 @@ const (
 	dbTag        = "db/article/tag"
 	dbComment    = "db/article/comment"
 	dbArticleUid = "db/article/uid/%d"
+	dbFavMS      = "db/article/favms"
+	dbFavSM      = "db/article/favsm"
 )
 
 type ArticleModel struct {
@@ -89,29 +91,50 @@ func GetArticleUserModel(userModel users.UserModel) ArticleUserModel {
 }
 
 func (article ArticleModel) favoritesCount() uint {
-	//db := common.GetDB()
-	var count uint
+
+	aid32 := common.Uint32toBin(article.ID)
+	var masterstar = make([]byte, 0)
+	masterstar = append(masterstar, aid32...)
+	masterstar = append(masterstar, '*')
+	keys, _ := sp.Keys(dbFavSM, masterstar, 0, 0, true)
 	/*
 		db.Model(&FavoriteModel{}).Where(FavoriteModel{
 			FavoriteID: article.ID,
 		}).Count(&count)
 	*/
-	return count
+	return uint(len(keys))
 }
 
 func (article ArticleModel) isFavoriteBy(user ArticleUserModel) bool {
 	//db := common.GetDB()
-	var favorite FavoriteModel
+
+	master := user.UserModel.ID
+	slave := article.ID
+	_, slavemaster := common.GetMasterSlave(master, slave)
+	has, _ := sp.Has(dbFavSM, slavemaster)
+	return has
 	/*
 		db.Where(FavoriteModel{
 			FavoriteID:   article.ID,
 			FavoriteByID: user.ID,
 		}).First(&favorite)
 	*/
-	return favorite.ID != 0
+	//return favorite.ID != 0
 }
 
 func (article ArticleModel) favoriteBy(user ArticleUserModel) (err error) {
+	log.Println("favoriteBy")
+	masterslave, slavemaster := common.GetMasterSlave(user.UserModel.ID, article.ID)
+	err = sp.Set(dbFavMS, masterslave, nil)
+	if err != nil {
+		return err
+	}
+	err = sp.Set(dbFavSM, slavemaster, nil)
+	if err != nil {
+		return err
+	}
+
+	return err
 	//	db := common.GetDB()
 	//var favorite FavoriteModel
 	/*
@@ -120,10 +143,20 @@ func (article ArticleModel) favoriteBy(user ArticleUserModel) (err error) {
 			FavoriteByID: user.ID,
 		}).Error
 	*/
-	return err
+
 }
 
 func (article ArticleModel) unFavoriteBy(user ArticleUserModel) (err error) {
+	log.Println("unFavoriteBy")
+	masterslave, slavemaster := common.GetMasterSlave(user.UserModel.ID, article.ID)
+	_, err = sp.Delete(dbFavMS, masterslave)
+	if err != nil {
+		return err
+	}
+	_, err = sp.Delete(dbFavSM, slavemaster)
+	if err != nil {
+		return err
+	}
 	/*
 		db := common.GetDB()
 		err := db.Where(FavoriteModel{
@@ -257,7 +290,6 @@ func SaveOneComment(comment *CommentModel) (err error) {
 		aid32 := common.Uint32toBin(comment.Article.ID)
 
 		f := fmt.Sprintf(dbArticleUid, comment.Article.ID)
-		//log.Println(f)
 		if err = sp.SetGob(f, aid32, comment.Article); err != nil {
 			return err
 		}
@@ -284,7 +316,6 @@ func FindOneArticle(article *ArticleModel) (model ArticleModel, err error) {
 	}
 	//log.Println("uid", uid)
 	f := fmt.Sprintf(dbArticleUid, common.BintoUint32(uid))
-	//log.Println(f)
 	err = sp.GetGob(f, aid, &model)
 	//log.Printf("model:%+v\n", model)
 
@@ -299,8 +330,6 @@ func (self *ArticleModel) getComments() (err error) {
 	log.Println("getComments:", cids)
 	var comments []CommentModel
 	for _, cid := range cids {
-		//cid32 := make([]byte, 4)
-		//binary.BigEndian.PutUint32(cid32, cid)
 		cid32 := common.Uint32toBin(cid)
 		var com CommentModel
 		if errCom := sp.GetGob(dbComment, cid32, &com); errCom == nil {
@@ -308,16 +337,6 @@ func (self *ArticleModel) getComments() (err error) {
 		}
 	}
 	self.Comments = comments
-	/*
-		db := common.GetDB()
-		tx := db.Begin()
-		tx.Model(self).Related(&self.Comments, "Comments")
-		for i, _ := range self.Comments {
-			tx.Model(&self.Comments[i]).Related(&self.Comments[i].Author, "Author")
-			tx.Model(&self.Comments[i].Author).Related(&self.Comments[i].Author.UserModel)
-		}
-		err := tx.Commit().Error
-	*/
 	return err
 }
 
@@ -494,24 +513,7 @@ func (self *ArticleUserModel) GetArticleFeed(limit, offset string) ([]ArticleMod
 			}
 		}
 	}
-	/*
-		tx := db.Begin()
-		followings := self.UserModel.GetFollowings()
-		var articleUserModels []uint
-		for _, following := range followings {
-			articleUserModel := GetArticleUserModel(following)
-			articleUserModels = append(articleUserModels, articleUserModel.ID)
-		}
 
-		tx.Where("author_id in (?)", articleUserModels).Order("updated_at desc").Offset(offset_int).Limit(limit_int).Find(&models)
-
-		for i, _ := range models {
-			tx.Model(&models[i]).Related(&models[i].Author, "Author")
-			tx.Model(&models[i].Author).Related(&models[i].Author.UserModel)
-			tx.Model(&models[i]).Related(&models[i].Tags, "Tags")
-		}
-		err = tx.Commit().Error
-	*/
 	return models, count, err
 }
 

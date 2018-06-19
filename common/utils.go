@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+
 	"gopkg.in/go-playground/validator.v8"
 
 	"github.com/gin-gonic/gin/binding"
@@ -92,4 +93,20 @@ func Uint32toBin(id uint32) []byte {
 func BintoUint32(b []byte) uint32 {
 
 	return binary.BigEndian.Uint32(b)
+}
+
+func GetMasterSlave(master uint32, slave uint32) ([]byte, []byte) {
+	master32 := Uint32toBin(master)
+	slave32 := Uint32toBin(slave)
+
+	var masterslave = make([]byte, 0)
+	masterslave = append(masterslave, master32...)
+	masterslave = append(masterslave, ':')
+	masterslave = append(masterslave, slave32...)
+
+	var slavemaster = make([]byte, 0)
+	slavemaster = append(slavemaster, slave32...)
+	slavemaster = append(slavemaster, ':')
+	slavemaster = append(slavemaster, master32...)
+	return masterslave, slavemaster
 }
