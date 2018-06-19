@@ -282,6 +282,7 @@ var unauthRequestTests = []struct {
 	},
 
 	//delete article 2
+
 	{
 		func(req *http.Request) {
 			HeaderTokenMock(req, 1)
@@ -304,5 +305,48 @@ var unauthRequestTests = []struct {
 		http.StatusOK,
 		``,
 		"request should return 1 articles",
+	},
+
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 2)
+		},
+		"/articles/",
+		"POST",
+		`{
+			"article": {
+				"title": "How are you2?",
+				"description": "how?2",
+				"body": "I'm fine, thank you2"
+			}
+		}`,
+		http.StatusCreated,
+		``,
+		"request should create 3 article",
+	},
+
+	//follow
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 2)
+		},
+		"/profiles/user1/follow",
+		"POST",
+		``,
+		http.StatusOK,
+		``,
+		"user follow another should work",
+	},
+	//get follow feed
+	{
+		func(req *http.Request) {
+			HeaderTokenMock(req, 2)
+		},
+		"/articles/feed",
+		"GET",
+		``,
+		http.StatusOK,
+		``,
+		"request should return 1 article",
 	},
 }

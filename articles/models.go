@@ -1,10 +1,12 @@
 package articles
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	_ "fmt"
 	"log"
+	"sort"
 	"strconv"
 	"time"
 
@@ -75,7 +77,7 @@ func GetArticleUserModel(userModel users.UserModel) ArticleUserModel {
 
 		return articleUserModel
 	}
-	//TODO query user?
+	//TODO why query user?
 	/*
 		db := common.GetDB()
 		db.Where(&ArticleUserModel{
@@ -451,8 +453,47 @@ func (self *ArticleUserModel) GetArticleFeed(limit, offset string) ([]ArticleMod
 	if err != nil {
 		limit_int = 20
 	}
-	_ = limit_int
-	_ = offset_int
+
+	followings := self.UserModel.GetFollowings()
+	var allIds = make([][]byte, 0, 0)
+	var aidUid = make(map[string]uint32)
+	for _, following := range followings {
+		//get limit + offset posts id from each user
+		ids, err := sp.Keys(fmt.Sprintf(dbArticleUid, following.ID), nil, uint32(limit_int+offset_int), 0, false)
+		if err == nil {
+
+			allIds = append(allIds, ids...)
+			for _, aids := range ids {
+				aidUid[string(aids)] = following.ID
+			}
+		}
+		cnt, err := sp.Count(fmt.Sprintf(dbArticleUid, following.ID))
+		if err == nil {
+			count += int(cnt)
+		}
+
+	}
+	// sort desc
+	sort.Slice(allIds, func(i, j int) bool {
+		return bytes.Compare(allIds[i], allIds[j]) >= 0
+	})
+
+	curLimit := 0
+	for num, id := range allIds {
+		if num >= offset_int {
+			if curLimit <= limit_int {
+
+				userId := aidUid[string(id)]
+				f := fmt.Sprintf(dbArticleUid, userId)
+				var model = ArticleModel{}
+				err = sp.GetGob(f, id, &model)
+				if err == nil {
+					models = append(models, model)
+				}
+				curLimit++
+			}
+		}
+	}
 	/*
 		tx := db.Begin()
 		followings := self.UserModel.GetFollowings()
