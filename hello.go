@@ -1,59 +1,62 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/recoilme/slowpoke"
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"gopkg.in/gin-gonic/gin.v1"
 
 	"github.com/recoilme/golang-gin-realworld-example-app/articles"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
+	"github.com/recoilme/slowpoke"
+	//"github.com/thinkerou/favicon"
 )
 
 func main() {
-
-	defer slowpoke.CloseAll()
-
-	r := gin.Default()
-	InitRouter(r)
-
-	testAuth := r.Group("/api/ping")
-
-	testAuth.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-
-	// test 1 to 1
-
-	userA := users.UserModel{
-		Username: "AAAAAAAAAAAAAAAA",
-		Email:    "aaaa@g.cn",
-		Bio:      "hehddeda",
-		Image:    nil,
+	srv := &http.Server{
+		Addr:    ":8081",
+		Handler: InitRouter(),
 	}
 
-	fmt.Println(userA)
+	go func() {
+		// service connections
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
 
-	//db.Save(&ArticleUserModel{
-	//    UserModelID:userA.ID,
-	//})
-	//var userAA ArticleUserModel
-	//db.Where(&ArticleUserModel{
-	//    UserModelID:userA.ID,
-	//}).First(&userAA)
-	//fmt.Println(userAA)
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 5 seconds.
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	log.Println("Shutdown Server ...")
 
-	r.Run() // listen and serve on 0.0.0.0:8080
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server Shutdown:", err)
+	}
+	// Close db
+	if err := slowpoke.CloseAll(); err != nil {
+		log.Fatal("Database Shutdown:", err)
+	}
+	log.Println("Server exiting")
+
 }
 
-func InitRouter(r *gin.Engine) {
+func InitRouter() *gin.Engine {
+	r := gin.Default()
+	//r.Use(favicon.New("./favicon.ico"))
 	r.Use(CORSMiddleware())
 	v1 := r.Group("/api")
 
 	users.UsersRegister(v1.Group("/users"))
+
 	v1.Use(users.AuthMiddleware(false))
 	articles.ArticlesAnonymousRegister(v1.Group("/articles"))
 	articles.TagsAnonymousRegister(v1.Group("/tags"))
@@ -63,6 +66,7 @@ func InitRouter(r *gin.Engine) {
 	users.ProfileRegister(v1.Group("/profiles"))
 
 	articles.ArticlesRegister(v1.Group("/articles"))
+	return r
 }
 
 func CORSMiddleware() gin.HandlerFunc {

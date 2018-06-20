@@ -1,6 +1,8 @@
 package articles
 
 import (
+	"fmt"
+
 	"github.com/gosimple/slug"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
 
@@ -27,6 +29,7 @@ func NewArticleModelValidatorFillWith(articleModel ArticleModel) ArticleModelVal
 	articleModelValidator.Article.Title = articleModel.Title
 	articleModelValidator.Article.Description = articleModel.Description
 	articleModelValidator.Article.Body = articleModel.Body
+
 	for _, tagModel := range articleModel.Tags {
 		articleModelValidator.Article.Tags = append(articleModelValidator.Article.Tags, tagModel.Tag)
 	}
@@ -45,6 +48,7 @@ func (s *ArticleModelValidator) Bind(c *gin.Context) error {
 	s.articleModel.Description = s.Article.Description
 	s.articleModel.Body = s.Article.Body
 	s.articleModel.Author = GetArticleUserModel(myUserModel)
+	fmt.Println("s.Article.Tags:", s.Article.Tags)
 	s.articleModel.setTags(s.Article.Tags)
 	return nil
 }

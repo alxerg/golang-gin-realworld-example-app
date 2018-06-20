@@ -13,7 +13,7 @@ import (
 )
 
 func ArticlesRegister(router *gin.RouterGroup) {
-	router.POST("/", ArticleCreate)
+	router.POST("", ArticleCreate)
 	router.PUT("/:slug", ArticleUpdate)
 	router.DELETE("/:slug", ArticleDelete)
 	router.POST("/:slug/favorite", ArticleFavorite)
@@ -23,7 +23,7 @@ func ArticlesRegister(router *gin.RouterGroup) {
 }
 
 func ArticlesAnonymousRegister(router *gin.RouterGroup) {
-	router.GET("/", ArticleList)
+	router.GET("", ArticleList)
 	router.GET("/:slug", ArticleRetrieve)
 	router.GET("/:slug/comments", ArticleCommentList)
 }
@@ -38,7 +38,7 @@ func ArticleCreate(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, common.NewValidatorError(err))
 		return
 	}
-	//fmt.Println(articleModelValidator.articleModel.Author.UserModel)
+	fmt.Println(articleModelValidator.articleModel)
 
 	if err := SaveOne(&articleModelValidator.articleModel); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, common.NewError("database", err))

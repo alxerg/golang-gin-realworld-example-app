@@ -108,7 +108,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 			common.ResetUsersDBWithMock()
 		},
-		"/users/",
+		"/users",
 		"POST",
 		`{"user":{"username": "user1","email": "e@mail.ru","password": "password","image":"http://tggram.com/media/natus_vincere_official/profile_photos/file_655143.jpg"}}`,
 		http.StatusCreated,
@@ -119,7 +119,7 @@ var unauthRequestTests = []struct {
 	{
 		func(req *http.Request) {
 		},
-		"/users/",
+		"/users",
 		"POST",
 		`{"user":{"username": "user2","email": "e2@mail.ru","password": "password","image":"http://tggram.com/media/recoilmeblog/profile_photos/file_654897.jpg"}}`,
 		http.StatusCreated,
@@ -143,7 +143,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 			HeaderTokenMock(req, 1)
 		},
-		"/articles/",
+		"/articles",
 		"POST",
 		`{
 			"article": {
@@ -173,7 +173,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 			HeaderTokenMock(req, 2)
 		},
-		"/articles/",
+		"/articles",
 		"POST",
 		`{
 			"article": {
@@ -191,7 +191,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 
 		},
-		"/articles/",
+		"/articles",
 		"GET",
 		``,
 		http.StatusOK,
@@ -203,7 +203,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 
 		},
-		"/articles/?author=user2",
+		"/articles?author=user2",
 		"GET",
 		``,
 		http.StatusOK,
@@ -299,7 +299,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 
 		},
-		"/articles/",
+		"/articles",
 		"GET",
 		``,
 		http.StatusOK,
@@ -311,7 +311,7 @@ var unauthRequestTests = []struct {
 		func(req *http.Request) {
 			HeaderTokenMock(req, 2)
 		},
-		"/articles/",
+		"/articles",
 		"POST",
 		`{
 			"article": {

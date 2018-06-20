@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	_ "fmt"
+
 	"log"
 	"sort"
 	"strconv"
@@ -25,6 +25,7 @@ const (
 	dbArticleUid = "db/article/uid/%d"
 	dbFavMS      = "db/article/favms"
 	dbFavSM      = "db/article/favsm"
+	dbTagAidUid  = "db/article/tagaiduid"
 )
 
 type ArticleModel struct {
@@ -206,7 +207,7 @@ func SaveOne(article *ArticleModel) (err error) {
 		article.CreatedAt = time.Now()
 		article.UpdatedAt = time.Now()
 		article.AuthorID = article.Author.UserModel.ID
-
+		//log.Println("Article", article)
 	} else {
 		err = checkSlug(article)
 		if err != nil {
@@ -236,6 +237,19 @@ func SaveOne(article *ArticleModel) (err error) {
 	//log.Println(f)
 	if err = sp.SetGob(f, id32, article); err != nil {
 		return err
+	}
+
+	for _, tag := range article.Tags {
+		if tag.Tag == "" {
+			continue
+		}
+		//sp.Set(dbTag, []byte(tag.Tag), nil)
+		var masterslave = make([]byte, 0)
+		masterslave = append(masterslave, []byte(tag.Tag)...)
+		masterslave = append(masterslave, ':')
+		masterslave = append(masterslave, id32...)
+		masterslave = append(masterslave, common.Uint32toBin(article.AuthorID)...)
+		sp.Set(dbTagAidUid, masterslave, nil)
 	}
 	/*
 		fmt.Println("id32", id32)
@@ -285,11 +299,12 @@ func SaveOneComment(comment *CommentModel) (err error) {
 
 	if isNew {
 		cids = append(cids, comment.ID)
-		//log.Println("is new cids", cids)
+
 		comment.Article.CommentsIds = cids
 		aid32 := common.Uint32toBin(comment.Article.ID)
 
-		f := fmt.Sprintf(dbArticleUid, comment.Article.ID)
+		f := fmt.Sprintf(dbArticleUid, comment.Article.Author.UserModel.ID)
+		//log.Println("is new cids", f, comment.Article)
 		if err = sp.SetGob(f, aid32, comment.Article); err != nil {
 			return err
 		}
@@ -341,6 +356,12 @@ func (self *ArticleModel) getComments() (err error) {
 }
 
 func getAllTags() (models []TagModel, err error) {
+	keys, _ := sp.Keys(dbTag, nil, uint32(0), uint32(0), true)
+	for _, key := range keys {
+		var model TagModel
+		model.Tag = string(key)
+		models = append(models, model)
+	}
 	/*
 		db := common.GetDB()
 		var models []TagModel
@@ -364,7 +385,26 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 	limit_int, _ = strconv.Atoi(limit)
 
 	if tag != "" {
-
+		var masterstar = make([]byte, 0)
+		masterstar = append(masterstar, []byte(tag)...)
+		masterstar = append(masterstar, ':')
+		masterstar = append(masterstar, '*')
+		keys, _ := sp.Keys(dbTagAidUid, masterstar, uint32(limit_int), uint32(offset_int), false)
+		for _, key := range keys {
+			if len(key) > len([]byte(tag)) {
+				aid := key[(len([]byte(tag)) + 1) : len([]byte(tag))+5]
+				uid := key[(len([]byte(tag)) + 5):]
+				log.Println("aiduid", aid, uid)
+				//var model ArticleModel
+				/*
+					if err = sp.GetGob(file, key, &model); err != nil {
+						fmt.Println("kerr", err)
+						break
+					}
+					models = append(models, model)
+				*/
+			}
+		}
 	} else if author != "" {
 		userModel, err := users.FindOneUser(&users.UserModel{Username: author})
 		if err == nil {
@@ -518,37 +558,24 @@ func (self *ArticleUserModel) GetArticleFeed(limit, offset string) ([]ArticleMod
 }
 
 func (model *ArticleModel) setTags(tags []string) error {
-	/*
-		db := common.GetDB()
-		var tagList []TagModel
-		for _, tag := range tags {
-			var tagModel TagModel
-			err := db.FirstOrCreate(&tagModel, TagModel{Tag: tag}).Error
-			if err != nil {
-				return err
-			}
+	log.Println("setTags", tags)
+
+	var tagList []TagModel
+	for _, tag := range tags {
+		var tagModel TagModel
+		var err error
+
+		exists, err := sp.Has(dbTag, []byte(tag))
+		if exists == false && err == nil {
+			err = sp.Set(dbTag, []byte(tag), nil)
+		}
+		if err == nil {
+			tagModel.Tag = tag
 			tagList = append(tagList, tagModel)
 		}
-		model.Tags = tagList
-	*/
-	/*
-		var tagList []TagModel
-		for _, tag := range tags {
-			var tagModel TagModel
-			var err error
-			var tagList []TagModel
-
-			exists, err := sp.Has(dbTag, []byte(tag))
-			if exists == false && err == nil {
-				err = sp.Set(dbTag, []byte(tag), nil)
-			}
-			if err == nil {
-				tagModel.Tag = tag
-				tagList = append(tagList, tagModel)
-			}
-		}
-		model.Tags = tagList
-	*/
+	}
+	model.Tags = tagList
+	//log.Println("model.Tags", model.Tags)
 	return nil
 }
 
