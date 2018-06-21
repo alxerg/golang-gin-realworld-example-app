@@ -81,12 +81,7 @@ func GetArticleUserModel(userModel users.UserModel) ArticleUserModel {
 		return articleUserModel
 	}
 	//TODO why query user?
-	/*
-		db := common.GetDB()
-		db.Where(&ArticleUserModel{
-			UserModelID: userModel.ID,
-		}).FirstOrCreate(&articleUserModel)
-	*/
+
 	articleUserModel.UserModel = userModel
 	return articleUserModel
 }
@@ -98,29 +93,16 @@ func (article ArticleModel) favoritesCount() uint {
 	masterstar = append(masterstar, aid32...)
 	masterstar = append(masterstar, '*')
 	keys, _ := sp.Keys(dbFavSM, masterstar, 0, 0, true)
-	/*
-		db.Model(&FavoriteModel{}).Where(FavoriteModel{
-			FavoriteID: article.ID,
-		}).Count(&count)
-	*/
+
 	return uint(len(keys))
 }
 
 func (article ArticleModel) isFavoriteBy(user ArticleUserModel) bool {
-	//db := common.GetDB()
-
 	master := user.UserModel.ID
 	slave := article.ID
 	_, slavemaster := common.GetMasterSlave(master, slave)
 	has, _ := sp.Has(dbFavSM, slavemaster)
 	return has
-	/*
-		db.Where(FavoriteModel{
-			FavoriteID:   article.ID,
-			FavoriteByID: user.ID,
-		}).First(&favorite)
-	*/
-	//return favorite.ID != 0
 }
 
 func (article ArticleModel) favoriteBy(user ArticleUserModel) (err error) {
@@ -136,15 +118,6 @@ func (article ArticleModel) favoriteBy(user ArticleUserModel) (err error) {
 	}
 
 	return err
-	//	db := common.GetDB()
-	//var favorite FavoriteModel
-	/*
-		err := db.FirstOrCreate(&favorite, &FavoriteModel{
-			FavoriteID:   article.ID,
-			FavoriteByID: user.ID,
-		}).Error
-	*/
-
 }
 
 func (article ArticleModel) unFavoriteBy(user ArticleUserModel) (err error) {
@@ -158,13 +131,6 @@ func (article ArticleModel) unFavoriteBy(user ArticleUserModel) (err error) {
 	if err != nil {
 		return err
 	}
-	/*
-		db := common.GetDB()
-		err := db.Where(FavoriteModel{
-			FavoriteID:   article.ID,
-			FavoriteByID: user.ID,
-		}).Delete(FavoriteModel{}).Error
-	*/
 	return err
 }
 
@@ -251,14 +217,6 @@ func SaveOne(article *ArticleModel) (err error) {
 		masterslave = append(masterslave, common.Uint32toBin(article.AuthorID)...)
 		sp.Set(dbTagAidUid, masterslave, nil)
 	}
-	/*
-		fmt.Println("id32", id32)
-		var a ArticleModel
-		sp.GetGob(dbArticle, id32, &a)
-		fmt.Println("a", a)
-		k, _ := sp.Keys(dbArticle, nil, uint32(0), uint32(0), false)
-		fmt.Println("k", k)
-	*/
 	return err
 }
 
@@ -274,7 +232,7 @@ func SaveOneComment(comment *CommentModel) (err error) {
 		comment.CreatedAt = time.Now()
 		comment.UpdatedAt = time.Now()
 		// workaround for sp crash
-		sp.Close(dbCounter)
+		//	sp.Close(dbCounter)
 	}
 
 	id32 := common.Uint32toBin(comment.ID)
@@ -362,11 +320,6 @@ func getAllTags() (models []TagModel, err error) {
 		model.Tag = string(key)
 		models = append(models, model)
 	}
-	/*
-		db := common.GetDB()
-		var models []TagModel
-		err := db.Find(&models).Error
-	*/
 	return models, err
 }
 
@@ -395,14 +348,14 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 				aid := key[(len([]byte(tag)) + 1) : len([]byte(tag))+5]
 				uid := key[(len([]byte(tag)) + 5):]
 				log.Println("aiduid", aid, uid)
-				//var model ArticleModel
-				/*
-					if err = sp.GetGob(file, key, &model); err != nil {
-						fmt.Println("kerr", err)
-						break
-					}
+				var model ArticleModel
+				file := fmt.Sprintf(dbArticleUid, common.BintoUint32(uid))
+				if err = sp.GetGob(file, aid, &model); err != nil {
+					fmt.Println("kerr", err)
+					//break
+				} else {
 					models = append(models, model)
-				*/
+				}
 			}
 		}
 	} else if author != "" {
@@ -422,6 +375,34 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 		//var userModel users.UserModel
 		//tx.Where(users.UserModel{Username: author}).First(&userModel)
 	} else if favorited != "" {
+		//get uid
+		userModel, err := users.FindOneUser(&users.UserModel{Username: favorited})
+		if err == nil {
+			//get favorite by uid
+			uid32 := common.Uint32toBin(userModel.ID)
+			var masterstar = make([]byte, 0)
+			masterstar = append(masterstar, uid32...)
+			masterstar = append(masterstar, '*')
+			allkeys, _ := sp.Keys(dbFavMS, masterstar, 0, 0, false)
+			cnt = uint64(len(allkeys))
+			keys, _ := sp.Keys(dbFavMS, masterstar, uint32(limit_int), uint32(offset_int), false)
+
+			for _, key := range keys {
+
+				log.Println("key", key, key[5:], key[:4])
+				uid, err := sp.Get(dbArticle, key[5:])
+				log.Println("uid", uid, err)
+				if err == nil {
+
+					f := fmt.Sprintf(dbArticleUid, common.BintoUint32(uid))
+					var model ArticleModel
+					err = sp.GetGob(f, key[5:], &model)
+					if err == nil {
+						models = append(models, model)
+					}
+				}
+			}
+		}
 	} else {
 		//no params
 		log.Println("no params")
@@ -449,53 +430,6 @@ func FindManyArticle(tag, author, limit, offset, favorited string) ([]ArticleMod
 	}
 	//log.Println("models", err, models)
 	return models, int(cnt), err
-	/*
-		tx := db.Begin()
-		if tag != "" {
-			var tagModel TagModel
-			tx.Where(TagModel{Tag: tag}).First(&tagModel)
-			if tagModel.ID != 0 {
-				tx.Model(&tagModel).Offset(offset_int).Limit(limit_int).Related(&models, "ArticleModels")
-				count = tx.Model(&tagModel).Association("ArticleModels").Count()
-			}
-		} else if author != "" {
-			var userModel users.UserModel
-			tx.Where(users.UserModel{Username: author}).First(&userModel)
-			articleUserModel := GetArticleUserModel(userModel)
-
-			if articleUserModel.ID != 0 {
-				count = tx.Model(&articleUserModel).Association("ArticleModels").Count()
-				tx.Model(&articleUserModel).Offset(offset_int).Limit(limit_int).Related(&models, "ArticleModels")
-			}
-		} else if favorited != "" {
-			var userModel users.UserModel
-			tx.Where(users.UserModel{Username: favorited}).First(&userModel)
-			articleUserModel := GetArticleUserModel(userModel)
-			if articleUserModel.ID != 0 {
-				var favoriteModels []FavoriteModel
-				tx.Where(FavoriteModel{
-					FavoriteByID: articleUserModel.ID,
-				}).Offset(offset_int).Limit(limit_int).Find(&favoriteModels)
-
-				count = tx.Model(&articleUserModel).Association("FavoriteModels").Count()
-				for _, favorite := range favoriteModels {
-					var model ArticleModel
-					tx.Model(&favorite).Related(&model, "Favorite")
-					models = append(models, model)
-				}
-			}
-		} else {
-			db.Model(&models).Count(&count)
-			db.Offset(offset_int).Limit(limit_int).Find(&models)
-		}
-
-		for i, _ := range models {
-			tx.Model(&models[i]).Related(&models[i].Author, "Author")
-			tx.Model(&models[i].Author).Related(&models[i].Author.UserModel)
-			tx.Model(&models[i]).Related(&models[i].Tags, "Tags")
-		}
-		err = tx.Commit().Error
-	*/
 }
 
 func (self *ArticleUserModel) GetArticleFeed(limit, offset string) ([]ArticleModel, int, error) {
@@ -581,10 +515,6 @@ func (model *ArticleModel) setTags(tags []string) error {
 
 func (model *ArticleModel) Update(article ArticleModel) (err error) {
 	SaveOne(&article)
-	/*
-		db := common.GetDB()
-		err := db.Model(model).Update(data).Error
-	*/
 	return SaveOne(&article)
 }
 
