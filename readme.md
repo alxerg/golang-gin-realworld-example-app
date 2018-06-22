@@ -63,8 +63,12 @@ go get -u github.com/pilu/fresh
 ```
 ➜  govendor sync
 ➜  govendor add +external
+➜  govendor fetch github.com/gin-gonic/gin
+➜  govendor fetch github.com/gin-gonic/gin/render
+➜  govendor fetch github.com/gin-gonic/gin/binding
 ➜  fresh
 ```
+
 
 ## Testing
 ```

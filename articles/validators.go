@@ -6,8 +6,8 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
 
+	"github.com/gin-gonic/gin"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
-	"gopkg.in/gin-gonic/gin.v1"
 )
 
 type ArticleModelValidator struct {

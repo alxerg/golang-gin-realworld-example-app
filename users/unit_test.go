@@ -15,7 +15,7 @@ import (
 	_ "regexp"
 
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
-	"gopkg.in/gin-gonic/gin.v1"
+	"github.com/gin-gonic/gin"
 )
 
 var image_url = "https://golang.org/doc/gopher/frontpage.png"

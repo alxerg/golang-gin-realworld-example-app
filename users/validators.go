@@ -1,8 +1,8 @@
 package users
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
-	"gopkg.in/gin-gonic/gin.v1"
 )
 
 // *ModelValidator containing two parts:

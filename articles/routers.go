@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
-	"gopkg.in/gin-gonic/gin.v1"
 )
 
 func ArticlesRegister(router *gin.RouterGroup) {

@@ -201,6 +201,7 @@ func (u UserModel) following(v UserModel) (err error) {
 func (u UserModel) isFollowing(v UserModel) bool {
 	master := u.ID
 	slave := v.ID
+
 	_, slavemaster := common.GetMasterSlave(master, slave)
 	has, _ := sp.Has(dbSlaveMaster, slavemaster)
 	return has

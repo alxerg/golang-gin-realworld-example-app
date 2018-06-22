@@ -9,7 +9,7 @@ import (
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
 
-	"gopkg.in/gin-gonic/gin.v1"
+	"github.com/gin-gonic/gin"
 )
 
 // Strips 'TOKEN ' prefix from token string

@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/recoilme/golang-gin-realworld-example-app/common"
 	"github.com/recoilme/golang-gin-realworld-example-app/users"
 	sp "github.com/recoilme/slowpoke"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/gin-gonic/gin.v1"
 )
 
 func TestRandString(t *testing.T) {
