@@ -6,10 +6,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/wangzitian0/golang-gin-starter-kit/blob/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/wangzitian0/golang-gin-starter-kit?status.svg)](https://godoc.org/github.com/wangzitian0/golang-gin-starter-kit)
 
-> ### Golang/Gin codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
+> ### Golang/Gin/Slowpoke codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
 
 
 This codebase was created to demonstrate a fully fledged fullstack application built with **Golang/Gin** including CRUD operations, authentication, routing, pagination, and more.
+
+
+This app use [slowpoke](https://github.com/recoilme/slowpoke) as database. Package slowpoke implements a low-level key/value store in pure Go.
+
+![slowpoke](http://tggram.com/media/recoilme/photos/file_488344.jpg)
 
 
 # How it works
