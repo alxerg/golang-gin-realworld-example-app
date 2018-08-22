@@ -7,15 +7,15 @@ go:
 
 go_import_path: github.com/wangzitian0/golang-gin-starter-kit
 
-services:
-  - sqlite3
+#services:
+#  - sqlite3
 
 install:
   - go get -u github.com/wangzitian0/golang-gin-starter-kit
   - go get -u github.com/kardianos/govendor
   - govendor sync
 script:
-#  - go test -v ./...
+  - go test -v ./...
   - bash ./scripts/gofmt.sh
   - bash ./scripts/coverage.sh
 
