@@ -17,6 +17,18 @@ This app use [slowpoke](https://github.com/recoilme/slowpoke) as database. Packa
 ![slowpoke](http://tggram.com/media/recoilme/photos/file_488344.jpg)
 
 
+# Read it
+
+
+don't use this code in production
+I just ported this project https://github.com/gothinkster/golang-gin-realworld-example-app
+from sqlite to my database - but i don't do any code review
+
+My app, as this app - absolutely ugly. It does tons of database requests on each web request
+That's a terrible part of code what i don't fix, sorry for that.. I feel shame I just learned golang on this project.
+
+I fixed it and write high load optimized code in another project, similar to real world - https://github.com/recoilme/tgram
+
 # How it works
 ```
 .
